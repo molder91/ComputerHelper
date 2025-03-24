@@ -1,4 +1,5 @@
 const { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, globalShortcut } = require('electron');
+const Store = require('electron-store');
 const path = require('node:path');
 const os = require('node:os');
 const { exec } = require('node:child_process');
@@ -11,6 +12,20 @@ const isDev = process.env.NODE_ENV === 'development' || process.argv.includes('-
 let mainWindow;
 // 保持对tray对象的全局引用，避免被垃圾回收
 let tray = null;
+
+// 创建设置存储实例
+const store = new Store({
+  name: 'settings', // 存储文件名称
+  defaults: {
+    shortcuts: {
+      hideWindow: 'Escape',
+      toggleNetwork: '',
+      showWindow: 'Alt+Shift+S'
+    },
+    autoHideStartup: false,
+    startWithSystem: false
+  }
+});
 
 function createWindow() {
   // 创建浏览器窗口
@@ -198,6 +213,11 @@ function registerGlobalShortcuts() {
 function registerCustomShortcuts(shortcut) {
   if (!shortcut || shortcut.trim() === '') return false;
   
+  // 保存快捷键设置
+  const shortcuts = store.get('shortcuts') || {};
+  shortcuts.showWindow = shortcut;
+  store.set('shortcuts', shortcuts);
+  
   try {
     // 先清除之前的显示窗口快捷键
     globalShortcut.unregisterAll();
@@ -226,6 +246,21 @@ function registerCustomShortcuts(shortcut) {
 // 当Electron完成初始化并准备创建浏览器窗口的时候
 // 这个方法会被调用。部分API在ready事件触发后才能使用。
 app.whenReady().then(() => {
+  // 从存储中加载设置
+  const shortcuts = store.get('shortcuts');
+  const autoHideStartup = store.get('autoHideStartup');
+  const startWithSystem = store.get('startWithSystem');
+  
+  // 应用设置
+  if (shortcuts?.showWindow) {
+    registerCustomShortcuts(shortcuts.showWindow);
+  }
+  
+  // 设置自启动
+  app.setLoginItemSettings({
+    openAtLogin: startWithSystem,
+    openAsHidden: autoHideStartup
+  });
   createWindow();
   createTray();
   registerGlobalShortcuts();
@@ -261,17 +296,71 @@ ipcMain.handle('hide-window', () => {
 // 设置开机自启动
 ipcMain.handle('set-auto-launch', (event, enable) => {
   try {
+    // 保存设置
+    store.set('startWithSystem', enable);
+    
+    // 应用设置
     if (!isDev) { // 开发模式下不设置自启动
       app.setLoginItemSettings({
         openAtLogin: enable,
-        openAsHidden: true, // 以隐藏状态启动
+        openAsHidden: store.get('autoHideStartup', true), // 以隐藏状态启动
         path: process.execPath
       });
     }
-    return { success: true };
+    return { success: true, message: enable ? '已设置开机自启动' : '已取消开机自启动' };
   } catch (error) {
     console.error('设置自启动失败:', error);
-    return { success: false, message: error.message };
+    return { success: false, message: '设置失败', error: error.toString() };
+  }
+});
+
+// 保存设置
+ipcMain.handle('save-settings', async (event, settings) => {
+  try {
+    // 保存设置到存储
+    store.set('shortcuts', settings.shortcuts);
+    store.set('autoHideStartup', settings.autoHideStartup);
+    store.set('startWithSystem', settings.startWithSystem);
+    
+    // 应用设置
+    if (!isDev) { // 开发模式下不设置自启动
+      app.setLoginItemSettings({
+        openAtLogin: settings.startWithSystem,
+        openAsHidden: settings.autoHideStartup,
+        path: process.execPath
+      });
+    }
+    
+    // 设置显示窗口快捷键
+    if (settings.shortcuts.showWindow) {
+      // 先注销所有已注册的快捷键
+      globalShortcut.unregisterAll();
+      
+      // 注册新的快捷键
+      registerCustomShortcuts(settings.shortcuts.showWindow);
+    }
+    
+    return { success: true, message: '设置已保存' };
+  } catch (error) {
+    console.error('保存设置失败:', error);
+    return { success: false, message: '保存设置失败', error: error.toString() };
+  }
+});
+
+// 加载设置
+ipcMain.handle('load-settings', async () => {
+  try {
+    // 从存储中加载设置
+    const settings = {
+      shortcuts: store.get('shortcuts'),
+      autoHideStartup: store.get('autoHideStartup'),
+      startWithSystem: store.get('startWithSystem')
+    };
+    
+    return { success: true, settings };
+  } catch (error) {
+    console.error('加载设置失败:', error);
+    return { success: false, message: '加载设置失败', error: error.toString() };
   }
 });
 

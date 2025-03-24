@@ -25,7 +25,7 @@ function hideWindow() {
 }
 
 // 存储快捷键设置
-let shortcutSettings = {
+const shortcutSettings = {
   hideWindow: 'Escape',
   toggleNetwork: '',
   showWindow: 'Alt+Shift+S',  // 新增显示窗口快捷键
@@ -36,20 +36,30 @@ let shortcutSettings = {
 // 当前正在记录的快捷键输入框
 let currentRecordingInput = null;
 
-// 从本地存储加载快捷键设置
-function loadShortcutSettings() {
-  const savedSettings = localStorage.getItem('shortcutSettings');
-  if (savedSettings) {
-    try {
-      shortcutSettings = JSON.parse(savedSettings);
-    } catch (e) {
-      console.error('加载快捷键设置失败:', e);
+// 从主进程加载快捷键设置
+async function loadShortcutSettings() {
+  try {
+    const result = await window.electronAPI.loadSettings();
+    if (result.success && result.settings) {
+      // 更新快捷键设置
+      if (result.settings.shortcuts) {
+        shortcutSettings.hideWindow = result.settings.shortcuts.hideWindow || 'Escape';
+        shortcutSettings.toggleNetwork = result.settings.shortcuts.toggleNetwork || '';
+        shortcutSettings.showWindow = result.settings.shortcuts.showWindow || 'Alt+Shift+S';
+      }
+      shortcutSettings.autoHideStartup = result.settings.autoHideStartup || false;
+      shortcutSettings.startWithSystem = result.settings.startWithSystem || false;
+      
+      // 更新UI
+      updateShortcutInputs();
     }
+  } catch (e) {
+    console.error('加载快捷键设置失败:', e);
   }
 }
 
-// 保存快捷键设置到本地存储
-function saveShortcutSettings() {
+// 保存快捷键设置到主进程
+async function saveShortcutSettings() {
   // 从输入框获取当前值
   const hideWindowInput = document.getElementById('hide-window-shortcut');
   const toggleNetworkInput = document.getElementById('toggle-network-shortcut');
@@ -64,34 +74,37 @@ function saveShortcutSettings() {
     shortcutSettings.autoHideStartup = autoHideStartupCheckbox.checked;
     shortcutSettings.startWithSystem = startWithSystemCheckbox.checked;
     
-    // 保存到本地存储
-    localStorage.setItem('shortcutSettings', JSON.stringify(shortcutSettings));
-    
-    // 如果启用了开机自启动，通知主进程设置开机自启动
-    window.electronAPI.setAutoLaunch(shortcutSettings.startWithSystem);
-    
-    // 设置显示窗口快捷键
-    if (shortcutSettings.showWindow) {
-      window.electronAPI.setShowWindowShortcut(shortcutSettings.showWindow)
-        .then(result => {
-          if (!result.success) {
-            console.error('设置显示窗口快捷键失败:', result.error);
-            alert(`设置显示窗口快捷键失败: ${result.error || '未知错误'}`);
-          }
-        })
-        .catch(error => {
-          console.error('设置显示窗口快捷键异常:', error);
-        });
+    try {
+      // 创建要保存的设置对象
+      const settings = {
+        shortcuts: {
+          hideWindow: shortcutSettings.hideWindow,
+          toggleNetwork: shortcutSettings.toggleNetwork,
+          showWindow: shortcutSettings.showWindow
+        },
+        autoHideStartup: shortcutSettings.autoHideStartup,
+        startWithSystem: shortcutSettings.startWithSystem
+      };
+      
+      // 保存设置到主进程
+      const result = await window.electronAPI.saveSettings(settings);
+      
+      if (result.success) {
+        // 隐藏设置面板
+        const settingsSection = document.getElementById('settings-section');
+        if (settingsSection) {
+          settingsSection.classList.add('hidden');
+        }
+        
+        // 显示保存成功提示
+        alert('设置已保存');
+      } else {
+        alert(`保存设置失败: ${result.message || '未知错误'}`);
+      }
+    } catch (error) {
+      console.error('保存设置异常:', error);
+      alert('保存设置失败，请查看控制台了解详情');
     }
-    
-    // 隐藏设置面板
-    const settingsSection = document.getElementById('settings-section');
-    if (settingsSection) {
-      settingsSection.classList.add('hidden');
-    }
-    
-    // 显示保存成功提示
-    alert('设置已保存');
   }
 }
 
@@ -226,7 +239,9 @@ function startRecordingShortcut(inputElement) {
 }
 
 // 在页面加载时加载快捷键设置
-loadShortcutSettings();
+document.addEventListener('DOMContentLoaded', () => {
+  loadShortcutSettings();
+});
 
 // 添加键盘快捷键
 window.addEventListener('keydown', (event) => {
@@ -278,9 +293,11 @@ document.addEventListener('DOMContentLoaded', () => {
   if (settingsBtn && settingsSection) {
     settingsBtn.addEventListener('click', () => {
       settingsSection.classList.toggle('hidden');
-      // 如果设置面板显示，更新输入框中的快捷键值
+      // 如果设置面板显示，加载最新设置并更新输入框
       if (!settingsSection.classList.contains('hidden')) {
-        updateShortcutInputs();
+        loadShortcutSettings().then(() => {
+          updateShortcutInputs();
+        });
       }
     });
   }
@@ -304,6 +321,9 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // 初始化清除按钮
   initClearButtons();
+  
+  // 加载设置
+  loadShortcutSettings();
   
   // 如果设置了启动时自动隐藏窗口，则自动隐藏
   if (shortcutSettings.autoHideStartup) {

@@ -18,6 +18,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   
   // 快捷键设置API
   setShowWindowShortcut: (shortcut) => ipcRenderer.invoke('set-show-window-shortcut', shortcut),
+  
+  // 设置保存和加载API
+  saveSettings: (settings) => ipcRenderer.invoke('save-settings', settings),
+  loadSettings: () => ipcRenderer.invoke('load-settings'),
 });
 
 // 可以在这里添加其他预加载逻辑

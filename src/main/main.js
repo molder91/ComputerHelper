@@ -26,6 +26,7 @@ const store = new Store({
     },
     autoHideStartup: false,
     startWithSystem: false,
+    theme: 'system', // 默认跟随系统主题
     hiddenApps: [] // 存储已隐藏的应用列表
   }
 });

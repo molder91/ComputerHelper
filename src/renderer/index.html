@@ -7,6 +7,11 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+  <div class="background-shapes">
+    <div class="shape shape-1"></div>
+    <div class="shape shape-2"></div>
+    <div class="shape shape-3"></div>
+  </div>
   <div class="container">
     <header>
       <h1>网络控制工具</h1>
@@ -33,6 +38,65 @@
           <button class="tool-button network-toggle" id="network-toggle-btn">一键断网</button>
           <button class="tool-button" id="minimize-btn">隐藏窗口</button>
           <button class="tool-button" id="settings-btn">设置</button>
+          <button class="tool-button repair-button" id="repair-btn">网络修复</button>
+        </div>
+      </section>
+      
+      <!-- 网络修复工具界面 - 默认隐藏 -->
+      <section class="card hidden" id="network-repair-section">
+        <h2>网络修复工具</h2>
+        <div class="repair-description">
+          <p>选择适合您当前网络问题的修复方案：</p>
+        </div>
+        
+        <!-- 修复选项 -->
+        <div class="repair-options">
+          <div class="repair-option">
+            <h3>基本修复</h3>
+            <p>重启网络接口，解决常见的连接问题</p>
+            <button class="repair-button" id="basic-repair-btn">执行基本修复</button>
+          </div>
+          <div class="repair-option">
+            <h3>DNS修复</h3>
+            <p>刷新DNS缓存，解决域名解析问题</p>
+            <button class="repair-button" id="dns-repair-btn">执行DNS修复</button>
+          </div>
+          <div class="repair-option">
+            <h3>IP修复</h3>
+            <p>释放并更新IP地址，解决IP冲突或配置问题</p>
+            <button class="repair-button" id="ip-repair-btn">执行IP修复</button>
+          </div>
+          <div class="repair-option">
+            <h3>高级修复</h3>
+            <p>执行全面的网络修复，包括重置网络堆栈和接口</p>
+            <button class="repair-button danger" id="advanced-repair-btn">执行高级修复</button>
+          </div>
+        </div>
+        
+        <!-- 修复状态 - 默认隐藏 -->
+        <div class="repair-status hidden" id="repair-status">
+          <div class="status-spinner"></div>
+          <div class="status-message" id="repair-status-message"></div>
+        </div>
+        
+        <!-- 修复结果 - 默认隐藏 -->
+        <div class="repair-result hidden" id="repair-result">
+          <h3>修复结果</h3>
+          <div class="result-message" id="repair-result-message"></div>
+        </div>
+        
+        <!-- 诊断结果 - 默认隐藏 -->
+        <div class="diagnostics-section hidden" id="diagnostics-section">
+          <h3>网络诊断</h3>
+          <div class="diagnostics-content" id="diagnostics-content">
+            <pre id="diagnostics-output"></pre>
+          </div>
+        </div>
+        
+        <!-- 操作按钮 -->
+        <div class="repair-actions">
+          <button class="action-button" id="run-diagnostics-btn">运行网络诊断</button>
+          <button class="action-button" id="close-repair-btn">关闭</button>
         </div>
       </section>
       
@@ -81,7 +145,7 @@
     </main>
 
     <footer>
-      <p>网络控制工具 v1.0.0 - 支持 macOS, Windows 和 Linux</p>
+      <p>网络控制工具 v1.1.0 - 支持 macOS, Windows 和 Linux</p>
     </footer>
   </div>
 

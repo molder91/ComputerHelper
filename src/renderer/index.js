@@ -1,5 +1,13 @@
 // 等待DOM加载完成
 document.addEventListener('DOMContentLoaded', () => {
+  // 添加淡入动画效果
+  document.querySelectorAll('.card').forEach((card, index) => {
+    if (!card.classList.contains('hidden')) {
+      card.classList.add('fade-in');
+      card.style.animationDelay = `${index * 0.1}s`;
+    }
+  });
+
   // 获取网络状态
   fetchNetworkStatus();
 
@@ -9,6 +17,24 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // 添加最小化窗口按钮事件监听
   document.getElementById('minimize-btn').addEventListener('click', minimizeWindow);
+  
+  // 添加网络修复按钮事件监听
+  document.getElementById('repair-btn').addEventListener('click', showNetworkRepair);
+  document.getElementById('close-repair-btn').addEventListener('click', hideNetworkRepair);
+  document.getElementById('basic-repair-btn').addEventListener('click', () => performNetworkRepair('basic'));
+  document.getElementById('dns-repair-btn').addEventListener('click', () => performNetworkRepair('dns'));
+  document.getElementById('ip-repair-btn').addEventListener('click', () => performNetworkRepair('ip'));
+  document.getElementById('advanced-repair-btn').addEventListener('click', () => performNetworkRepair('advanced'));
+  document.getElementById('run-diagnostics-btn').addEventListener('click', runNetworkDiagnostics);
+  
+  // 添加按钮波纹效果
+  addRippleEffect();
+  
+// 监听从托盘菜单打开网络修复的事件
+document.addEventListener('show-network-repair', () => {
+  showNetworkRepair();
+  // 只显示界面，不自动执行修复
+});
   
   // 定时刷新网络状态
   setInterval(fetchNetworkStatus, 5000);
@@ -450,5 +476,253 @@ async function toggleNetworkQuick() {
     quickToggleButton.disabled = false;
     quickToggleButton.textContent = '操作失败';
     await fetchNetworkStatus();
+  }
+}
+
+// 显示网络修复界面
+function showNetworkRepair() {
+  // 隐藏设置界面
+  const settingsSection = document.getElementById('settings-section');
+  if (settingsSection) {
+    settingsSection.classList.add('hidden');
+  }
+  
+  // 显示网络修复界面
+  const repairSection = document.getElementById('network-repair-section');
+  if (repairSection) {
+    repairSection.classList.remove('hidden');
+  }
+  
+  // 确保修复状态、结果和诊断都是隐藏的
+  hideRepairStatus();
+  hideRepairResult();
+  hideDiagnostics();
+  
+  console.log('显示网络修复界面');
+}
+
+// 隐藏网络修复界面
+function hideNetworkRepair() {
+  const repairSection = document.getElementById('network-repair-section');
+  if (repairSection) {
+    repairSection.classList.add('hidden');
+  }
+}
+
+// 显示修复状态
+function showRepairStatus(message) {
+  const statusSection = document.getElementById('repair-status');
+  const statusMessage = document.getElementById('repair-status-message');
+  
+  if (statusSection && statusMessage) {
+    statusMessage.textContent = message || '正在执行修复...';
+    statusSection.classList.remove('hidden');
+    console.log('显示修复状态:', message);
+  }
+}
+
+// 隐藏修复状态
+function hideRepairStatus() {
+  const statusSection = document.getElementById('repair-status');
+  if (statusSection) {
+    statusSection.classList.add('hidden');
+  }
+}
+
+// 显示修复结果
+function showRepairResult(success, message) {
+  const resultSection = document.getElementById('repair-result');
+  const resultMessage = document.getElementById('repair-result-message');
+  
+  if (resultSection && resultMessage) {
+    resultMessage.textContent = message || (success ? '修复成功' : '修复失败');
+    resultMessage.className = `result-message ${success ? 'success' : 'error'}`;
+    resultSection.classList.remove('hidden');
+  }
+}
+
+// 隐藏修复结果
+function hideRepairResult() {
+  const resultSection = document.getElementById('repair-result');
+  if (resultSection) {
+    resultSection.classList.add('hidden');
+  }
+}
+
+// 显示诊断结果
+function showDiagnostics() {
+  const diagnosticsSection = document.getElementById('diagnostics-section');
+  if (diagnosticsSection) {
+    diagnosticsSection.classList.remove('hidden');
+  }
+}
+
+// 隐藏诊断结果
+function hideDiagnostics() {
+  const diagnosticsSection = document.getElementById('diagnostics-section');
+  if (diagnosticsSection) {
+    diagnosticsSection.classList.add('hidden');
+  }
+}
+
+// 执行网络修复
+async function performNetworkRepair(repairType) {
+  try {
+    // 禁用所有修复按钮
+    const repairButtons = document.querySelectorAll('.repair-button');
+    for (const button of repairButtons) {
+      button.disabled = true;
+    }
+    
+    // 隐藏之前的结果
+    hideRepairResult();
+    hideDiagnostics();
+    
+    // 显示修复状态
+    let statusMessage = '正在执行修复...';
+    switch (repairType) {
+      case 'basic':
+        statusMessage = '正在执行基本网络修复...';
+        break;
+      case 'dns':
+        statusMessage = '正在刷新DNS缓存...';
+        break;
+      case 'ip':
+        statusMessage = '正在更新IP地址...';
+        break;
+      case 'advanced':
+        statusMessage = '正在执行高级网络修复...';
+        break;
+    }
+    showRepairStatus(statusMessage);
+    
+    // 调用修复API
+    const result = await window.electronAPI.repairNetwork(repairType);
+    
+    // 隐藏修复状态
+    hideRepairStatus();
+    
+    // 显示修复结果
+    showRepairResult(result.success, result.message);
+    
+    // 重新获取网络状态
+    await fetchNetworkStatus();
+  } catch (error) {
+    console.error('网络修复失败:', error);
+    hideRepairStatus();
+    showRepairResult(false, `修复失败: ${error.message || '未知错误'}`);
+  } finally {
+    // 重新启用所有修复按钮
+    const repairButtons = document.querySelectorAll('.repair-button');
+    for (const button of repairButtons) {
+      button.disabled = false;
+    }
+  }
+}
+
+// 添加按钮波纹效果
+function addRippleEffect() {
+  const buttons = document.querySelectorAll('.tool-button, .action-button, .repair-button');
+  
+  buttons.forEach(button => {
+    button.addEventListener('click', function(e) {
+      const rect = button.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      
+      const ripple = document.createElement('span');
+      ripple.className = 'ripple-effect';
+      ripple.style.left = `${x}px`;
+      ripple.style.top = `${y}px`;
+      
+      button.appendChild(ripple);
+      
+      setTimeout(() => {
+        ripple.remove();
+      }, 600); // 与CSS动画时长一致
+    });
+  });
+}
+
+// 运行网络诊断
+async function runNetworkDiagnostics() {
+  try {
+    // 显示诊断状态
+    showRepairStatus('正在运行网络诊断...');
+    
+    // 隐藏之前的结果
+    hideRepairResult();
+    
+    // 调用诊断API
+    const diagnostics = await window.electronAPI.getNetworkDiagnostics();
+    
+    // 隐藏诊断状态
+    hideRepairStatus();
+    
+    // 格式化诊断结果
+    const diagnosticsOutput = document.getElementById('diagnostics-output');
+    if (diagnosticsOutput) {
+      let output = '';
+      
+      // 平台信息
+      output += `操作系统: ${diagnostics.platform}\n\n`;
+      
+      // 网络接口信息
+      output += '网络接口:\n';
+      for (const [name, interfaces] of Object.entries(diagnostics.networkInterfaces)) {
+        output += `  ${name}:\n`;
+        for (const iface of interfaces) {
+          output += `    - 地址: ${iface.address}\n`;
+          output += `      类型: ${iface.family}\n`;
+          output += `      MAC: ${iface.mac}\n`;
+          output += `      内部: ${iface.internal ? '是' : '否'}\n`;
+        }
+      }
+      output += '\n';
+      
+      // Ping 测试结果
+      output += 'Ping 测试:\n';
+      for (const [host, result] of Object.entries(diagnostics.pingResults)) {
+        output += `  ${host}: ${result.success ? '成功' : '失败'}\n`;
+        if (result.success) {
+          output += `    ${result.output.split('\n').slice(0, 3).join('\n    ')}\n`;
+        } else {
+          output += `    错误: ${result.error}\n`;
+        }
+      }
+      output += '\n';
+      
+      // DNS 测试结果
+      output += 'DNS 测试:\n';
+      for (const [host, result] of Object.entries(diagnostics.dnsResults)) {
+        output += `  ${host}: ${result.success ? '成功' : '失败'}\n`;
+        if (result.success) {
+          const dnsOutput = result.output.split('\n').slice(0, 5);
+          output += `    ${dnsOutput.join('\n    ')}\n`;
+        } else {
+          output += `    错误: ${result.error}\n`;
+        }
+      }
+      output += '\n';
+      
+      // 路由信息
+      output += '路由信息:\n';
+      if (diagnostics.routeResults.success) {
+        const routeOutput = diagnostics.routeResults.output.split('\n').slice(0, 10);
+        output += `  ${routeOutput.join('\n  ')}\n`;
+      } else {
+        output += `  错误: ${diagnostics.routeResults.error}\n`;
+      }
+      
+      diagnosticsOutput.textContent = output;
+    }
+    
+    // 显示诊断结果
+    showDiagnostics();
+    
+  } catch (error) {
+    console.error('网络诊断失败:', error);
+    hideRepairStatus();
+    showRepairResult(false, `诊断失败: ${error.message || '未知错误'}`);
   }
 }

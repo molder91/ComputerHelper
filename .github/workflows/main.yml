@@ -1,0 +1,90 @@
+name: Build and Release Electron App
+
+on:
+  push:
+    branches:
+      - main  # 监听 main 分支上的 push 事件
+
+jobs:
+  check-version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.extract_version.outputs.version }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Extract version from commit message
+        id: extract_version
+        run: |
+          VERSION=$(git log -1 --pretty=%B | grep -oP 'Version:v\d+\.\d+\.\d+' | head -1 | sed 's/Version:v//')
+          if [[ -z "$VERSION" ]]; then
+            echo "No version found, skipping release."
+            exit 1
+          fi
+          echo "version=$VERSION" >> $GITHUB_ENV
+          echo "::set-output name=version::$VERSION"
+
+  build:
+    needs: check-version
+    if: success()
+    strategy:
+      matrix:
+        os: [windows-latest, macos-latest]  # 在 Windows 和 macOS 上同时构建
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build Electron app
+        run: npm run build
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4  # ✅ 升级到 v4
+        with:
+          name: electron-build-${{ matrix.os }}
+          path: dist/
+
+  release:
+    needs: [check-version, build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Download Windows Build
+        uses: actions/download-artifact@v4  # ✅ 升级到 v4
+        with:
+          name: electron-build-windows-latest
+          path: dist/
+
+      - name: Download macOS Build
+        uses: actions/download-artifact@v4  # ✅ 升级到 v4
+        with:
+          name: electron-build-macos-latest
+          path: dist/
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ needs.check-version.outputs.version }}
+          name: Release v${{ needs.check-version.outputs.version }}
+          body: "This is an automatically generated release for version v${{ needs.check-version.outputs.version }}."
+          draft: false
+          prerelease: false
+          files: |
+            dist/*.exe
+            dist/*.dmg
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUBTOKEN }}

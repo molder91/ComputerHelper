@@ -72,10 +72,27 @@ pnpm build:win
 ```
 Computer Helper/
 ├── src/
+│   ├── assets/      # 图标和资源文件
+│   │   ├── icon.png
+│   │   ├── icon.svg
+│   │   ├── tray-icon.png
+│   │   └── tray-icon.svg
 │   ├── main/        # 主进程代码
+│   │   └── main.js
+│   ├── preload/     # 预加载脚本（安全地暴露API）
+│   │   └── preload.js
 │   ├── renderer/    # 渲染进程代码（前端UI）
-│   └── preload/     # 预加载脚本（安全地暴露API）
+│   │   ├── index.html
+│   │   ├── index.js
+│   │   └── styles.css
+│   └── scripts/     # 系统脚本
+│       ├── hide_app.scpt
+│       ├── restore_app.scpt
+│       ├── restore_network.scpt
+│       ├── restore_network.sh
+│       └── wifi_on.sh
 ├── package.json     # 项目配置
+├── pnpm-lock.yaml   # 依赖锁定文件
 └── README.md        # 项目说明
 ```
 

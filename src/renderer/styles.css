@@ -150,14 +150,14 @@ main {
   pointer-events: none;
 }
 
-/* 设置面板和修复工具面板的滑入/滑出效果 */
-#settings-section, #network-repair-section {
+/* 设置面板、修复工具面板和隐藏应用列表的滑入/滑出效果 */
+#settings-section, #network-repair-section, #hidden-apps-section {
   transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
   opacity: 1;
   transform: translateX(0);
 }
 
-#settings-section.hidden, #network-repair-section.hidden {
+#settings-section.hidden, #network-repair-section.hidden, #hidden-apps-section.hidden {
   opacity: 0;
   transform: translateX(50px);
   pointer-events: none;
@@ -447,10 +447,95 @@ footer {
   overflow: hidden;
 }
 
-.repair-button:hover {
+.repair-button:hover, .hide-app-button:hover {
   background: linear-gradient(135deg, rgba(0, 112, 201, 0.8) 0%, rgba(0, 91, 161, 0.8) 100%);
   transform: translateY(-2px);
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+.hide-app-button {
+  background: linear-gradient(135deg, rgba(0, 112, 201, 0.6) 0%, rgba(0, 91, 161, 0.6) 100%);
+  color: rgba(255, 255, 255, 0.95);
+  border: none;
+}
+
+/* 隐藏应用列表样式 */
+.hidden-apps-list {
+  margin: 20px 0;
+  max-height: 300px;
+  overflow-y: auto;
+  padding-right: 5px;
+}
+
+.hidden-app-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 15px;
+  margin-bottom: 10px;
+  transition: all 0.3s ease;
+}
+
+.hidden-app-item:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+.hidden-app-info {
+  flex: 1;
+}
+
+.hidden-app-name {
+  font-weight: bold;
+  font-size: 1.1rem;
+  margin-bottom: 5px;
+}
+
+.hidden-app-path, .hidden-app-time {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.9rem;
+  margin-bottom: 3px;
+}
+
+.hidden-app-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.restore-app-btn {
+  background: linear-gradient(135deg, rgba(76, 175, 80, 0.8) 0%, rgba(56, 142, 60, 0.8) 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.restore-app-btn:hover {
+  background: linear-gradient(135deg, rgba(76, 175, 80, 1) 0%, rgba(56, 142, 60, 1) 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+}
+
+.no-hidden-apps {
+  text-align: center;
+  padding: 30px;
+  color: rgba(255, 255, 255, 0.7);
+  font-style: italic;
+}
+
+.hidden-apps-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
 }
 
 .repair-button.danger {

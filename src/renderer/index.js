@@ -54,15 +54,19 @@ function hideWindow() {
 const shortcutSettings = {
   hideWindow: 'Escape',
   toggleNetwork: '',
-  showWindow: 'Alt+Shift+S',  // 新增显示窗口快捷键
+  showWindow: 'Alt+Shift+S',  // 显示窗口快捷键
+  hideApp: 'CommandOrControl+Shift+H',  // 隐藏应用快捷键
   autoHideStartup: false,
   startWithSystem: false
 };
 
+// 存储隐藏的应用列表
+let hiddenApps = [];
+
 // 当前正在记录的快捷键输入框
 let currentRecordingInput = null;
 
-// 从主进程加载快捷键设置
+// 从主进程加载快捷键设置和隐藏的应用列表
 async function loadShortcutSettings() {
   try {
     const result = await window.electronAPI.loadSettings();
@@ -72,15 +76,22 @@ async function loadShortcutSettings() {
         shortcutSettings.hideWindow = result.settings.shortcuts.hideWindow || 'Escape';
         shortcutSettings.toggleNetwork = result.settings.shortcuts.toggleNetwork || '';
         shortcutSettings.showWindow = result.settings.shortcuts.showWindow || 'Alt+Shift+S';
+        shortcutSettings.hideApp = result.settings.shortcuts.hideApp || 'CommandOrControl+Shift+H';
       }
       shortcutSettings.autoHideStartup = result.settings.autoHideStartup || false;
       shortcutSettings.startWithSystem = result.settings.startWithSystem || false;
+      
+      // 更新隐藏的应用列表
+      if (result.settings.hiddenApps) {
+        hiddenApps = result.settings.hiddenApps;
+        updateHiddenAppsList();
+      }
       
       // 更新UI
       updateShortcutInputs();
     }
   } catch (e) {
-    console.error('加载快捷键设置失败:', e);
+    console.error('加载设置失败:', e);
   }
 }
 
@@ -90,13 +101,15 @@ async function saveShortcutSettings() {
   const hideWindowInput = document.getElementById('hide-window-shortcut');
   const toggleNetworkInput = document.getElementById('toggle-network-shortcut');
   const showWindowInput = document.getElementById('show-window-shortcut');
+  const hideAppInput = document.getElementById('hide-app-shortcut');
   const autoHideStartupCheckbox = document.getElementById('auto-hide-startup');
   const startWithSystemCheckbox = document.getElementById('start-with-system');
   
-  if (hideWindowInput && toggleNetworkInput && showWindowInput && autoHideStartupCheckbox && startWithSystemCheckbox) {
+  if (hideWindowInput && toggleNetworkInput && showWindowInput && hideAppInput && autoHideStartupCheckbox && startWithSystemCheckbox) {
     shortcutSettings.hideWindow = hideWindowInput.value || 'Escape';
     shortcutSettings.toggleNetwork = toggleNetworkInput.value || '';
     shortcutSettings.showWindow = showWindowInput.value || 'Alt+Shift+S';
+    shortcutSettings.hideApp = hideAppInput.value || 'CommandOrControl+Shift+H';
     shortcutSettings.autoHideStartup = autoHideStartupCheckbox.checked;
     shortcutSettings.startWithSystem = startWithSystemCheckbox.checked;
     
@@ -106,7 +119,8 @@ async function saveShortcutSettings() {
         shortcuts: {
           hideWindow: shortcutSettings.hideWindow,
           toggleNetwork: shortcutSettings.toggleNetwork,
-          showWindow: shortcutSettings.showWindow
+          showWindow: shortcutSettings.showWindow,
+          hideApp: shortcutSettings.hideApp
         },
         autoHideStartup: shortcutSettings.autoHideStartup,
         startWithSystem: shortcutSettings.startWithSystem
@@ -139,13 +153,15 @@ function updateShortcutInputs() {
   const hideWindowInput = document.getElementById('hide-window-shortcut');
   const toggleNetworkInput = document.getElementById('toggle-network-shortcut');
   const showWindowInput = document.getElementById('show-window-shortcut');
+  const hideAppInput = document.getElementById('hide-app-shortcut');
   const autoHideStartupCheckbox = document.getElementById('auto-hide-startup');
   const startWithSystemCheckbox = document.getElementById('start-with-system');
   
-  if (hideWindowInput && toggleNetworkInput && showWindowInput) {
+  if (hideWindowInput && toggleNetworkInput && showWindowInput && hideAppInput) {
     hideWindowInput.value = shortcutSettings.hideWindow || '';
     toggleNetworkInput.value = shortcutSettings.toggleNetwork || '';
     showWindowInput.value = shortcutSettings.showWindow || 'Alt+Shift+S';
+    hideAppInput.value = shortcutSettings.hideApp || 'CommandOrControl+Shift+H';
   }
   
   if (autoHideStartupCheckbox) {
@@ -162,6 +178,7 @@ function initShortcutInputs() {
   const hideWindowInput = document.getElementById('hide-window-shortcut');
   const toggleNetworkInput = document.getElementById('toggle-network-shortcut');
   const showWindowInput = document.getElementById('show-window-shortcut');
+  const hideAppInput = document.getElementById('hide-app-shortcut');
   
   // 初始化输入框值
   updateShortcutInputs();
@@ -184,6 +201,12 @@ function initShortcutInputs() {
       startRecordingShortcut(this);
     });
   }
+  
+  if (hideAppInput) {
+    hideAppInput.addEventListener('click', function() {
+      startRecordingShortcut(this);
+    });
+  }
 }
 
 // 初始化清除按钮
@@ -191,6 +214,7 @@ function initClearButtons() {
   const clearHideBtn = document.getElementById('clear-hide-shortcut');
   const clearNetworkBtn = document.getElementById('clear-network-shortcut');
   const clearShowBtn = document.getElementById('clear-show-shortcut');
+  const clearHideAppBtn = document.getElementById('clear-hide-app-shortcut');
   
   if (clearHideBtn) {
     clearHideBtn.addEventListener('click', () => {
@@ -215,6 +239,15 @@ function initClearButtons() {
       const input = document.getElementById('show-window-shortcut');
       if (input) {
         input.value = 'Alt+Shift+S'; // 重置为默认值
+      }
+    });
+  }
+  
+  if (clearHideAppBtn) {
+    clearHideAppBtn.addEventListener('click', () => {
+      const input = document.getElementById('hide-app-shortcut');
+      if (input) {
+        input.value = 'CommandOrControl+Shift+H'; // 重置为默认值
       }
     });
   }
@@ -264,6 +297,162 @@ function startRecordingShortcut(inputElement) {
   window.addEventListener('keydown', recordShortcut);
 }
 
+// 更新隐藏应用列表
+async function updateHiddenAppsList() {
+  // 获取隐藏应用列表容器
+  const hiddenAppsList = document.getElementById('hidden-apps-list');
+  const noHiddenAppsMessage = document.getElementById('no-hidden-apps');
+  
+  if (!hiddenAppsList) return;
+  
+  // 清除列表内容，但保留“无隐藏应用”的提示
+  for (const child of Array.from(hiddenAppsList.children)) {
+    if (child.id !== 'no-hidden-apps') {
+      hiddenAppsList.removeChild(child);
+    }
+  }
+  
+  // 从主进程获取最新的隐藏应用列表
+  try {
+    const result = await window.electronAPI.getHiddenApps();
+    if (result.success && result.hiddenApps) {
+      hiddenApps = result.hiddenApps;
+    }
+  } catch (error) {
+    console.error('获取隐藏应用列表失败:', error);
+  }
+  
+  // 判断是否有隐藏的应用
+  if (hiddenApps.length === 0) {
+    if (noHiddenAppsMessage) {
+      noHiddenAppsMessage.style.display = 'block';
+    }
+    return;
+  }
+  
+  // 隐藏“无隐藏应用”的提示
+  if (noHiddenAppsMessage) {
+    noHiddenAppsMessage.style.display = 'none';
+  }
+  
+  // 生成隐藏应用列表
+  for (const app of hiddenApps) {
+    const appItem = document.createElement('div');
+    appItem.className = 'hidden-app-item';
+    appItem.dataset.id = app.id;
+    
+    // 创建应用信息显示区
+    const appInfo = document.createElement('div');
+    appInfo.className = 'hidden-app-info';
+    
+    // 应用名称
+    const appName = document.createElement('div');
+    appName.className = 'hidden-app-name';
+    appName.textContent = app.name;
+    appInfo.appendChild(appName);
+    
+    // 应用路径
+    const appPath = document.createElement('div');
+    appPath.className = 'hidden-app-path';
+    appPath.textContent = `路径: ${app.path || '未知'}`;
+    appInfo.appendChild(appPath);
+    
+    // 隐藏时间
+    const appTime = document.createElement('div');
+    appTime.className = 'hidden-app-time';
+    const hideTime = app.hideTime ? new Date(app.hideTime).toLocaleString() : '未知时间';
+    appTime.textContent = `隐藏于: ${hideTime}`;
+    appInfo.appendChild(appTime);
+    
+    // 添加应用信息到列表项
+    appItem.appendChild(appInfo);
+    
+    // 创建操作区
+    const appActions = document.createElement('div');
+    appActions.className = 'hidden-app-actions';
+    
+    // 恢复按钮
+    const restoreBtn = document.createElement('button');
+    restoreBtn.className = 'restore-app-btn';
+    restoreBtn.textContent = '恢复应用';
+    restoreBtn.addEventListener('click', () => restoreHiddenApp(app.id));
+    appActions.appendChild(restoreBtn);
+    
+    // 添加操作区到列表项
+    appItem.appendChild(appActions);
+    
+    // 添加到隐藏应用列表
+    hiddenAppsList.appendChild(appItem);
+  }
+}
+
+// 隐藏当前应用
+async function hideCurrentApp() {
+  try {
+    const result = await window.electronAPI.hideCurrentApp();
+    if (result.success) {
+      console.log('已隐藏应用:', result.appInfo?.name);
+      // 显示隐藏应用列表面板
+      showHiddenAppsPanel();
+      // 更新隐藏应用列表
+      updateHiddenAppsList();
+    } else {
+      console.error('隐藏应用失败:', result.message);
+      alert(`隐藏应用失败: ${result.message || '未知原因'}`);
+    }
+  } catch (error) {
+    console.error('隐藏应用时出错:', error);
+    alert('隐藏应用失败，请查看控制台日志');
+  }
+}
+
+// 恢复隐藏的应用
+async function restoreHiddenApp(appId) {
+  if (!appId) {
+    console.error('未提供有效的应用ID');
+    return;
+  }
+  
+  try {
+    const result = await window.electronAPI.restoreHiddenApp(appId);
+    if (result.success) {
+      console.log('已恢复应用:', result.appName);
+      // 更新隐藏应用列表
+      updateHiddenAppsList();
+    } else {
+      console.error('恢复应用失败:', result.message);
+      alert(`恢复应用失败: ${result.message || '未知原因'}`);
+    }
+  } catch (error) {
+    console.error('恢复应用时出错:', error);
+    alert('恢复应用失败，请查看控制台日志');
+  }
+}
+
+// 显示隐藏应用列表面板
+function showHiddenAppsPanel() {
+  // 隐藏其他面板
+  const settingsSection = document.getElementById('settings-section');
+  const networkRepairSection = document.getElementById('network-repair-section');
+  
+  settingsSection?.classList.add('hidden');
+  networkRepairSection?.classList.add('hidden');
+  
+  // 显示隐藏应用列表面板
+  const hiddenAppsSection = document.getElementById('hidden-apps-section');
+  hiddenAppsSection?.classList.remove('hidden');
+  // 只在面板存在时更新列表
+  if (hiddenAppsSection) {
+    updateHiddenAppsList();
+  }
+}
+
+// 隐藏应用列表面板
+function hideHiddenAppsPanel() {
+  const hiddenAppsSection = document.getElementById('hidden-apps-section');
+  hiddenAppsSection?.classList.add('hidden');
+}
+
 // 在页面加载时加载快捷键设置
 document.addEventListener('DOMContentLoaded', () => {
   loadShortcutSettings();
@@ -309,38 +498,62 @@ function isMatchingShortcut(event, shortcut) {
 document.addEventListener('DOMContentLoaded', () => {
   // 隐藏窗口按钮
   const minimizeBtn = document.getElementById('minimize-btn');
-  if (minimizeBtn) {
-    minimizeBtn.addEventListener('click', hideWindow);
-  }
+  
+  // 隐藏当前应用按钮
+  const hideAppBtn = document.getElementById('hide-app-btn');
+  hideAppBtn?.addEventListener('click', hideCurrentApp);
+  
+  // 显示隐藏应用列表按钮
+  const showHiddenAppsBtn = document.getElementById('show-hidden-apps-btn');
+  showHiddenAppsBtn?.addEventListener('click', showHiddenAppsPanel);
+  
+  // 关闭隐藏应用列表按钮
+  const closeHiddenAppsBtn = document.getElementById('close-hidden-apps-btn');
+  closeHiddenAppsBtn?.addEventListener('click', hideHiddenAppsPanel);
+  
+  // 刷新隐藏应用列表按钮
+  const refreshHiddenAppsBtn = document.getElementById('refresh-hidden-apps-btn');
+  refreshHiddenAppsBtn?.addEventListener('click', updateHiddenAppsList);
+  
+  // 监听隐藏应用结果事件
+  document.addEventListener('hide-app-result', (event) => {
+    const result = event.detail;
+    if (result && result.success) {
+      console.log('已隐藏应用:', result.appInfo?.name);
+      // 显示隐藏应用列表面板
+      showHiddenAppsPanel();
+      // 更新隐藏应用列表
+      updateHiddenAppsList();
+    } else {
+      const errorMsg = result ? result.message : '未知错误';
+      console.error('隐藏应用失败:', errorMsg);
+      alert(`隐藏应用失败: ${errorMsg}`);
+    }
+  });
+  minimizeBtn?.addEventListener('click', hideWindow);
   
   // 设置按钮
   const settingsBtn = document.getElementById('settings-btn');
   const settingsSection = document.getElementById('settings-section');
-  if (settingsBtn && settingsSection) {
-    settingsBtn.addEventListener('click', () => {
-      settingsSection.classList.toggle('hidden');
-      // 如果设置面板显示，加载最新设置并更新输入框
-      if (!settingsSection.classList.contains('hidden')) {
-        loadShortcutSettings().then(() => {
-          updateShortcutInputs();
-        });
-      }
-    });
-  }
+  settingsBtn?.addEventListener('click', () => {
+    settingsSection?.classList.toggle('hidden');
+    // 如果设置面板显示且存在，加载最新设置并更新输入框
+    if (settingsSection && !settingsSection.classList.contains('hidden')) {
+      loadShortcutSettings().then(() => {
+        updateShortcutInputs();
+      });
+    }
+  });
   
   // 取消设置按钮
   const cancelSettingsBtn = document.getElementById('cancel-settings');
-  if (cancelSettingsBtn && settingsSection) {
-    cancelSettingsBtn.addEventListener('click', () => {
-      settingsSection.classList.add('hidden');
-    });
-  }
+  cancelSettingsBtn?.addEventListener('click', () => {
+    settingsSection?.classList.add('hidden');
+  });
   
   // 保存设置按钮
   const saveSettingsBtn = document.getElementById('save-settings');
-  if (saveSettingsBtn) {
-    saveSettingsBtn.addEventListener('click', saveShortcutSettings);
-  }
+  saveSettingsBtn?.addEventListener('click', saveShortcutSettings);
   
   // 初始化快捷键输入框
   initShortcutInputs();

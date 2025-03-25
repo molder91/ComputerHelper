@@ -39,6 +39,28 @@
           <button class="tool-button" id="minimize-btn">隐藏窗口</button>
           <button class="tool-button" id="settings-btn">设置</button>
           <button class="tool-button repair-button" id="repair-btn">网络修复</button>
+          <button class="tool-button hide-app-button" id="hide-app-btn">隐藏当前应用</button>
+          <button class="tool-button" id="show-hidden-apps-btn">隐藏应用列表</button>
+        </div>
+      </section>
+      
+      <!-- 隐藏的应用列表界面 - 默认隐藏 -->
+      <section class="card hidden" id="hidden-apps-section">
+        <h2>隐藏的应用列表</h2>
+        <div class="hidden-apps-description">
+          <p>以下是当前被隐藏的应用程序，点击恢复按钮可以恢复应用：</p>
+        </div>
+        
+        <!-- 隐藏应用列表 -->
+        <div class="hidden-apps-list" id="hidden-apps-list">
+          <!-- 由JavaScript动态生成 -->
+          <div class="no-hidden-apps" id="no-hidden-apps">当前没有隐藏的应用程序</div>
+        </div>
+        
+        <!-- 操作按钮 -->
+        <div class="hidden-apps-actions">
+          <button class="action-button" id="refresh-hidden-apps-btn">刷新列表</button>
+          <button class="action-button" id="close-hidden-apps-btn">关闭</button>
         </div>
       </section>
       
@@ -122,6 +144,13 @@
             <div class="shortcut-input-container">
               <input type="text" id="toggle-network-shortcut" placeholder="点击设置" readonly>
               <button id="clear-network-shortcut" class="clear-btn">清除</button>
+            </div>
+          </div>
+          <div class="setting-item">
+            <label for="hide-app-shortcut">隐藏应用快捷键:</label>
+            <div class="shortcut-input-container">
+              <input type="text" id="hide-app-shortcut" placeholder="点击设置" readonly>
+              <button id="clear-hide-app-shortcut" class="clear-btn">清除</button>
             </div>
           </div>
           <div class="setting-item checkbox-setting">

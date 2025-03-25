@@ -21,10 +21,12 @@ const store = new Store({
     shortcuts: {
       hideWindow: 'Escape',
       toggleNetwork: '',
-      showWindow: 'Alt+Shift+S'
+      showWindow: 'Alt+Shift+S',
+      hideApp: 'CommandOrControl+Shift+H'
     },
     autoHideStartup: false,
-    startWithSystem: false
+    startWithSystem: false,
+    hiddenApps: [] // 存储已隐藏的应用列表
   }
 });
 
@@ -616,7 +618,7 @@ function registerGlobalShortcuts() {
   }
 }
 
-// 注册自定义全局快捷键
+// 注册自定义全局快捷键 - 设置显示窗口快捷键
 function registerCustomShortcuts(shortcut) {
   if (!shortcut || shortcut.trim() === '') return false;
   
@@ -625,10 +627,7 @@ function registerCustomShortcuts(shortcut) {
   shortcuts.showWindow = shortcut;
   store.set('shortcuts', shortcuts);
   
-  try {
-    // 先清除之前的显示窗口快捷键
-    globalShortcut.unregisterAll();
-    
+  try {    
     // 注册新的快捷键
     globalShortcut.register(shortcut, () => {
       if (mainWindow) {
@@ -644,8 +643,6 @@ function registerCustomShortcuts(shortcut) {
     return true;
   } catch (error) {
     console.error(`注册自定义快捷键 ${shortcut} 失败:`, error);
-    // 如果注册失败，恢复默认快捷键
-    registerGlobalShortcuts();
     return false;
   }
 }
@@ -654,14 +651,8 @@ function registerCustomShortcuts(shortcut) {
 // 这个方法会被调用。部分API在ready事件触发后才能使用。
 app.whenReady().then(() => {
   // 从存储中加载设置
-  const shortcuts = store.get('shortcuts');
   const autoHideStartup = store.get('autoHideStartup');
   const startWithSystem = store.get('startWithSystem');
-  
-  // 应用设置
-  if (shortcuts?.showWindow) {
-    registerCustomShortcuts(shortcuts.showWindow);
-  }
   
   // 设置自启动
   app.setLoginItemSettings({
@@ -671,6 +662,7 @@ app.whenReady().then(() => {
   createWindow();
   createTray();
   registerGlobalShortcuts();
+  registerAllShortcuts();
 
   app.on('activate', () => {
     // 在macOS上，当点击dock图标并且没有其他窗口打开的时候，
@@ -690,6 +682,204 @@ app.on('window-all-closed', () => {
 app.on('will-quit', () => {
   globalShortcut.unregisterAll();
 });
+
+// 注册所有快捷键
+function registerAllShortcuts() {
+  try {
+    // 先注销所有已注册的快捷键
+    globalShortcut.unregisterAll();
+    
+    // 从存储中获取当前设置的快捷键
+    const shortcuts = store.get('shortcuts', {});
+    
+    // 显示窗口的快捷键（如果设置了）
+    if (shortcuts.showWindow && shortcuts.showWindow.trim() !== '') {
+      try {
+        globalShortcut.register(shortcuts.showWindow, () => {
+          if (mainWindow) {
+            mainWindow.show();
+            mainWindow.focus();
+          } else {
+            createWindow();
+          }
+        });
+        console.log(`成功注册显示窗口快捷键: ${shortcuts.showWindow}`);
+      } catch (e) {
+        console.error(`无法注册显示窗口快捷键 ${shortcuts.showWindow}:`, e);
+      }
+    }
+
+    // 断网快捷键（如果设置了）
+    if (shortcuts.toggleNetwork && shortcuts.toggleNetwork.trim() !== '') {
+      try {
+        globalShortcut.register(shortcuts.toggleNetwork, async () => {
+          // 检查当前网络状态
+          const statusResult = await getNetworkStatus();
+          if (statusResult.connected) {
+            // 如果网络已连接，则断开
+            await toggleNetwork(false);
+          } else {
+            // 如果网络已断开，则恢复
+            await toggleNetwork(true);
+          }
+        });
+        console.log(`成功注册断网快捷键: ${shortcuts.toggleNetwork}`);
+      } catch (e) {
+        console.error(`无法注册断网快捷键 ${shortcuts.toggleNetwork}:`, e);
+      }
+    }
+    
+    // 隐藏当前应用的快捷键（如果设置了）
+    if (shortcuts.hideApp && shortcuts.hideApp.trim() !== '') {
+      try {
+        globalShortcut.register(shortcuts.hideApp, async () => {
+          await hideCurrentApp();
+        });
+        console.log(`成功注册隐藏应用快捷键: ${shortcuts.hideApp}`);
+      } catch (e) {
+        console.error(`无法注册隐藏应用快捷键 ${shortcuts.hideApp}:`, e);
+      }
+    }
+  } catch (error) {
+    console.error('注册自定义快捷键失败:', error);
+  }
+}
+
+// 隐藏当前聚焦的应用程序
+async function hideCurrentApp() {
+  try {
+    // 使用AppleScript获取并隐藏当前聚焦的应用程序
+    const hideAppScriptPath = path.join(__dirname, '../scripts/hide_app.scpt');
+    const { stdout, stderr } = await execPromise(`osascript "${hideAppScriptPath}"`);
+    
+    if (stderr) {
+      console.error('隐藏应用程序失败:', stderr);
+      if (mainWindow) {
+        mainWindow.webContents.send('hide-app-result', { success: false, message: '隐藏应用程序失败' });
+      }
+      return { success: false, message: '隐藏应用程序失败', error: stderr };
+    }
+    
+    if (stdout.startsWith('ERROR:')) {
+      console.error('AppleScript返回错误:', stdout);
+      if (mainWindow) {
+        mainWindow.webContents.send('hide-app-result', { success: false, message: stdout });
+      }
+      return { success: false, message: stdout };
+    }
+    
+    // 解析应用程序信息 - 处理AppleScript返回的结果
+    // AppleScript返回结果格式如：{name:"应用名", path:"/路径", bundleID:"com.example.app"}
+    let appInfo;
+    try {
+      // 尝试解析AppleScript返回的记录格式
+      const matches = stdout.match(/\{name:"([^"]+)", path:"([^"]+)", bundleID:"([^"]+)"\}/);
+      if (matches && matches.length >= 4) {
+        appInfo = {
+          name: matches[1],
+          path: matches[2],
+          bundleID: matches[3]
+        };
+      } else {
+        // 如果匹配失败，尝试作为JSON解析
+        appInfo = JSON.parse(stdout);
+      }
+      console.log('成功隐藏应用程序:', appInfo.name);
+    } catch (parseError) {
+      console.error('解析应用信息失败:', parseError);
+      return { success: false, message: '解析应用信息失败', error: parseError.toString() };
+    }
+    
+    // 存储隐藏的应用程序信息
+    const hiddenApps = store.get('hiddenApps', []);
+    const now = new Date().toISOString();
+    
+    hiddenApps.push({
+      ...appInfo,
+      hiddenAt: now,
+      id: `${appInfo.bundleID}-${now}`
+    });
+    
+    store.set('hiddenApps', hiddenApps);
+    
+    // 通知渲染进程
+    if (mainWindow) {
+      mainWindow.webContents.send('hide-app-result', { 
+        success: true, 
+        message: `成功隐藏应用程序: ${appInfo.name}`, 
+        appInfo: {
+          ...appInfo,
+          hiddenAt: now,
+          id: `${appInfo.bundleID}-${now}`
+        }
+      });
+    }
+    
+    return { 
+      success: true, 
+      message: `成功隐藏应用程序: ${appInfo.name}`, 
+      appInfo
+    };
+  } catch (error) {
+    console.error('隐藏应用程序失败:', error);
+    if (mainWindow) {
+      mainWindow.webContents.send('hide-app-result', { success: false, message: '隐藏应用程序失败', error: error.toString() });
+    }
+    return { success: false, message: '隐藏应用程序失败', error: error.toString() };
+  }
+}
+
+// 恢复隐藏的应用程序
+async function restoreHiddenApp(appId) {
+  try {
+    // 查找要恢复的应用程序
+    const hiddenApps = store.get('hiddenApps', []);
+    const appIndex = hiddenApps.findIndex(app => app.id === appId);
+    
+    if (appIndex === -1) {
+      console.error('未找到要恢复的应用程序:', appId);
+      return { success: false, message: '未找到要恢复的应用程序' };
+    }
+    
+    const appToRestore = hiddenApps[appIndex];
+    
+    // 使用AppleScript恢复应用程序
+    const restoreAppScriptPath = path.join(__dirname, '../scripts/restore_app.scpt');
+    const { stdout, stderr } = await execPromise(`osascript "${restoreAppScriptPath}" "${appToRestore.bundleID}"`);
+    
+    if (stderr) {
+      console.error('恢复应用程序失败:', stderr);
+      return { success: false, message: '恢复应用程序失败', error: stderr };
+    }
+    
+    if (stdout.trim() !== 'SUCCESS') {
+      console.error('恢复应用程序失败:', stdout);
+      return { success: false, message: stdout };
+    }
+    
+    // 从隐藏列表中移除该应用
+    hiddenApps.splice(appIndex, 1);
+    store.set('hiddenApps', hiddenApps);
+    
+    console.log('成功恢复应用程序:', appToRestore.name);
+    return { success: true, message: `成功恢复应用程序: ${appToRestore.name}`, appInfo: appToRestore };
+  } catch (error) {
+    console.error('恢复应用程序失败:', error);
+    return { success: false, message: '恢复应用程序失败', error: error.toString() };
+  }
+}
+
+// 获取隐藏的应用程序列表
+function getHiddenApps() {
+  try {
+    const hiddenApps = store.get('hiddenApps', []);
+    console.log('获取隐藏应用列表:', hiddenApps.length, '个应用');
+    return { success: true, hiddenApps };
+  } catch (error) {
+    console.error('获取隐藏应用列表失败:', error);
+    return { success: false, message: '获取隐藏应用列表失败', error: error.toString() };
+  }
+}
 
 // 添加关闭窗口事件处理，改为隐藏窗口而不是关闭
 ipcMain.handle('hide-window', () => {
@@ -738,14 +928,8 @@ ipcMain.handle('save-settings', async (event, settings) => {
       });
     }
     
-    // 设置显示窗口快捷键
-    if (settings.shortcuts.showWindow) {
-      // 先注销所有已注册的快捷键
-      globalShortcut.unregisterAll();
-      
-      // 注册新的快捷键
-      registerCustomShortcuts(settings.shortcuts.showWindow);
-    }
+    // 注册快捷键
+    registerAllShortcuts();
     
     return { success: true, message: '设置已保存' };
   } catch (error) {
@@ -761,7 +945,8 @@ ipcMain.handle('load-settings', async () => {
     const settings = {
       shortcuts: store.get('shortcuts'),
       autoHideStartup: store.get('autoHideStartup'),
-      startWithSystem: store.get('startWithSystem')
+      startWithSystem: store.get('startWithSystem'),
+      hiddenApps: store.get('hiddenApps', [])
     };
     
     return { success: true, settings };
@@ -792,6 +977,21 @@ ipcMain.handle('get-system-info', () => {
 ipcMain.handle('toggle-network', async (event, enable) => {
   // 使用封装好的toggleNetwork函数
   return await toggleNetwork(enable);
+});
+
+// 隐藏当前应用的IPC处理器
+ipcMain.handle('hide-current-app', async () => {
+  return await hideCurrentApp();
+});
+
+// 恢复隐藏的应用的IPC处理器
+ipcMain.handle('restore-hidden-app', async (event, appId) => {
+  return await restoreHiddenApp(appId);
+});
+
+// 获取隐藏应用列表的IPC处理器
+ipcMain.handle('get-hidden-apps', () => {
+  return getHiddenApps();
 });
 
 // 获取网络状态的IPC处理器

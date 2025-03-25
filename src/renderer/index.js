@@ -12,43 +12,11 @@ document.addEventListener('DOMContentLoaded', () => {
   fetchNetworkStatus();
 
   // 添加网络控制按钮事件监听
-  document.getElementById('network-toggle-btn').addEventListener('click', toggleNetworkQuick);
   document.getElementById('toggle-network-btn').addEventListener('click', toggleNetwork);
-  
-  // 添加最小化窗口按钮事件监听
-  document.getElementById('minimize-btn').addEventListener('click', minimizeWindow);
-  
-  // 添加网络修复按钮事件监听
-  document.getElementById('repair-btn').addEventListener('click', showNetworkRepair);
-  document.getElementById('close-repair-btn').addEventListener('click', hideNetworkRepair);
-  document.getElementById('basic-repair-btn').addEventListener('click', () => performNetworkRepair('basic'));
-  document.getElementById('dns-repair-btn').addEventListener('click', () => performNetworkRepair('dns'));
-  document.getElementById('ip-repair-btn').addEventListener('click', () => performNetworkRepair('ip'));
-  document.getElementById('advanced-repair-btn').addEventListener('click', () => performNetworkRepair('advanced'));
-  document.getElementById('run-diagnostics-btn').addEventListener('click', runNetworkDiagnostics);
-  
-  // 添加按钮波纹效果
-  addRippleEffect();
-  
-// 监听从托盘菜单打开网络修复的事件
-document.addEventListener('show-network-repair', () => {
-  showNetworkRepair();
-  // 只显示界面，不自动执行修复
-});
   
   // 定时刷新网络状态
   setInterval(fetchNetworkStatus, 5000);
 });
-
-// 最小化窗口
-function minimizeWindow() {
-  window.electronAPI.minimizeWindow();
-}
-
-// 隐藏窗口
-function hideWindow() {
-  window.electronAPI.hideWindow();
-}
 
 // 存储快捷键设置
 const shortcutSettings = {
@@ -65,6 +33,16 @@ let hiddenApps = [];
 
 // 当前正在记录的快捷键输入框
 let currentRecordingInput = null;
+
+// 最小化窗口
+function minimizeWindow() {
+  window.electronAPI.minimizeWindow();
+}
+
+// 隐藏窗口
+function hideWindow() {
+  window.electronAPI.hideWindow();
+}
 
 // 从主进程加载快捷键设置和隐藏的应用列表
 async function loadShortcutSettings() {
@@ -305,7 +283,7 @@ async function updateHiddenAppsList() {
   
   if (!hiddenAppsList) return;
   
-  // 清除列表内容，但保留“无隐藏应用”的提示
+  // 清除列表内容，但保留"无隐藏应用"的提示
   for (const child of Array.from(hiddenAppsList.children)) {
     if (child.id !== 'no-hidden-apps') {
       hiddenAppsList.removeChild(child);
@@ -330,7 +308,7 @@ async function updateHiddenAppsList() {
     return;
   }
   
-  // 隐藏“无隐藏应用”的提示
+  // 隐藏"无隐藏应用"的提示
   if (noHiddenAppsMessage) {
     noHiddenAppsMessage.style.display = 'none';
   }
@@ -471,7 +449,7 @@ window.addEventListener('keydown', (event) => {
   
   // 断网快捷键
   if (shortcutSettings.toggleNetwork && isMatchingShortcut(event, shortcutSettings.toggleNetwork)) {
-    toggleNetworkQuick();
+    toggleNetwork();
     event.preventDefault();
   }
 });
@@ -535,33 +513,34 @@ document.addEventListener('DOMContentLoaded', () => {
   // 设置按钮
   const settingsBtn = document.getElementById('settings-btn');
   const settingsSection = document.getElementById('settings-section');
-  settingsBtn?.addEventListener('click', () => {
-    settingsSection?.classList.toggle('hidden');
-    // 如果设置面板显示且存在，加载最新设置并更新输入框
-    if (settingsSection && !settingsSection.classList.contains('hidden')) {
-      loadShortcutSettings().then(() => {
-        updateShortcutInputs();
-      });
-    }
-  });
+  if (settingsBtn) {
+    settingsBtn.addEventListener('click', () => {
+      // 删除该事件监听器，因为已经删除了该按钮
+    });
+  }
   
-  // 取消设置按钮
-  const cancelSettingsBtn = document.getElementById('cancel-settings');
-  cancelSettingsBtn?.addEventListener('click', () => {
-    settingsSection?.classList.add('hidden');
-  });
-  
-  // 保存设置按钮
+  // 添加保存设置按钮事件监听
   const saveSettingsBtn = document.getElementById('save-settings');
-  saveSettingsBtn?.addEventListener('click', saveShortcutSettings);
+  if (saveSettingsBtn) {
+    saveSettingsBtn.addEventListener('click', saveShortcutSettings);
+  }
   
-  // 初始化快捷键输入框
+  // 添加取消设置按钮事件监听
+  const cancelSettingsBtn = document.getElementById('cancel-settings');
+  if (cancelSettingsBtn) {
+    cancelSettingsBtn.addEventListener('click', () => {
+      const settingsSection = document.getElementById('settings-section');
+      if (settingsSection) {
+        settingsSection.classList.add('hidden');
+      }
+    });
+  }
+  
+  // 初始化快捷键输入框和清除按钮
   initShortcutInputs();
-  
-  // 初始化清除按钮
   initClearButtons();
   
-  // 加载设置
+  // 加载快捷键设置
   loadShortcutSettings();
   
   // 如果设置了启动时自动隐藏窗口，则自动隐藏
@@ -593,7 +572,6 @@ async function fetchNetworkStatus() {
     const statusDot = document.getElementById('network-status-dot');
     const statusText = document.getElementById('network-status-text');
     const toggleButton = document.getElementById('toggle-network-btn');
-    const quickToggleButton = document.getElementById('network-toggle-btn');
     
     // 显示加载中状态
     statusDot.className = 'status-dot';
@@ -607,16 +585,12 @@ async function fetchNetworkStatus() {
       statusText.textContent = status.message || '网络已连接';
       toggleButton.textContent = '断开网络';
       toggleButton.className = 'action-button danger';
-      quickToggleButton.textContent = '一键断网';
-      quickToggleButton.className = 'tool-button network-toggle connected';
     } else {
       // 网络已断开
       statusDot.className = 'status-dot disconnected';
       statusText.textContent = status.message || '网络已断开';
       toggleButton.textContent = '恢复网络';
       toggleButton.className = 'action-button success';
-      quickToggleButton.textContent = '恢复网络';
-      quickToggleButton.className = 'tool-button network-toggle disconnected';
     }
     
     return status.connected;
@@ -665,277 +639,57 @@ async function toggleNetwork() {
   }
 }
 
-// 一键断网/恢复网络
-async function toggleNetworkQuick() {
-  try {
-    const quickToggleButton = document.getElementById('network-toggle-btn');
-    
-    // 获取当前网络状态
-    const isConnected = await fetchNetworkStatus();
-    
-    // 显示加载中状态
-    quickToggleButton.disabled = true;
-    quickToggleButton.textContent = isConnected ? '正在断开...' : '正在恢复...';
-    
-    // 调用切换网络状态API
-    await window.electronAPI.toggleNetwork(!isConnected);
-    
-    // 更新UI
-    quickToggleButton.disabled = false;
-    await fetchNetworkStatus();
-  } catch (error) {
-    console.error('快速切换网络状态失败:', error);
-    const quickToggleButton = document.getElementById('network-toggle-btn');
-    quickToggleButton.disabled = false;
-    quickToggleButton.textContent = '操作失败';
-    await fetchNetworkStatus();
-  }
-}
-
 // 显示网络修复界面
 function showNetworkRepair() {
-  // 隐藏设置界面
-  const settingsSection = document.getElementById('settings-section');
-  if (settingsSection) {
-    settingsSection.classList.add('hidden');
-  }
-  
-  // 显示网络修复界面
-  const repairSection = document.getElementById('network-repair-section');
-  if (repairSection) {
-    repairSection.classList.remove('hidden');
-  }
-  
-  // 确保修复状态、结果和诊断都是隐藏的
-  hideRepairStatus();
-  hideRepairResult();
-  hideDiagnostics();
-  
-  console.log('显示网络修复界面');
+  // 已删除
 }
 
 // 隐藏网络修复界面
 function hideNetworkRepair() {
-  const repairSection = document.getElementById('network-repair-section');
-  if (repairSection) {
-    repairSection.classList.add('hidden');
-  }
+  // 已删除
 }
 
 // 显示修复状态
 function showRepairStatus(message) {
-  const statusSection = document.getElementById('repair-status');
-  const statusMessage = document.getElementById('repair-status-message');
-  
-  if (statusSection && statusMessage) {
-    statusMessage.textContent = message || '正在执行修复...';
-    statusSection.classList.remove('hidden');
-    console.log('显示修复状态:', message);
-  }
+  // 已删除
 }
 
 // 隐藏修复状态
 function hideRepairStatus() {
-  const statusSection = document.getElementById('repair-status');
-  if (statusSection) {
-    statusSection.classList.add('hidden');
-  }
+  // 已删除
 }
 
 // 显示修复结果
 function showRepairResult(success, message) {
-  const resultSection = document.getElementById('repair-result');
-  const resultMessage = document.getElementById('repair-result-message');
-  
-  if (resultSection && resultMessage) {
-    resultMessage.textContent = message || (success ? '修复成功' : '修复失败');
-    resultMessage.className = `result-message ${success ? 'success' : 'error'}`;
-    resultSection.classList.remove('hidden');
-  }
+  // 已删除
 }
 
 // 隐藏修复结果
 function hideRepairResult() {
-  const resultSection = document.getElementById('repair-result');
-  if (resultSection) {
-    resultSection.classList.add('hidden');
-  }
+  // 已删除
 }
 
 // 显示诊断结果
 function showDiagnostics() {
-  const diagnosticsSection = document.getElementById('diagnostics-section');
-  if (diagnosticsSection) {
-    diagnosticsSection.classList.remove('hidden');
-  }
+  // 已删除
 }
 
 // 隐藏诊断结果
 function hideDiagnostics() {
-  const diagnosticsSection = document.getElementById('diagnostics-section');
-  if (diagnosticsSection) {
-    diagnosticsSection.classList.add('hidden');
-  }
+  // 已删除
 }
 
 // 执行网络修复
 async function performNetworkRepair(repairType) {
-  try {
-    // 禁用所有修复按钮
-    const repairButtons = document.querySelectorAll('.repair-button');
-    for (const button of repairButtons) {
-      button.disabled = true;
-    }
-    
-    // 隐藏之前的结果
-    hideRepairResult();
-    hideDiagnostics();
-    
-    // 显示修复状态
-    let statusMessage = '正在执行修复...';
-    switch (repairType) {
-      case 'basic':
-        statusMessage = '正在执行基本网络修复...';
-        break;
-      case 'dns':
-        statusMessage = '正在刷新DNS缓存...';
-        break;
-      case 'ip':
-        statusMessage = '正在更新IP地址...';
-        break;
-      case 'advanced':
-        statusMessage = '正在执行高级网络修复...';
-        break;
-    }
-    showRepairStatus(statusMessage);
-    
-    // 调用修复API
-    const result = await window.electronAPI.repairNetwork(repairType);
-    
-    // 隐藏修复状态
-    hideRepairStatus();
-    
-    // 显示修复结果
-    showRepairResult(result.success, result.message);
-    
-    // 重新获取网络状态
-    await fetchNetworkStatus();
-  } catch (error) {
-    console.error('网络修复失败:', error);
-    hideRepairStatus();
-    showRepairResult(false, `修复失败: ${error.message || '未知错误'}`);
-  } finally {
-    // 重新启用所有修复按钮
-    const repairButtons = document.querySelectorAll('.repair-button');
-    for (const button of repairButtons) {
-      button.disabled = false;
-    }
-  }
+  // 已删除
 }
 
 // 添加按钮波纹效果
 function addRippleEffect() {
-  const buttons = document.querySelectorAll('.tool-button, .action-button, .repair-button');
-  
-  buttons.forEach(button => {
-    button.addEventListener('click', function(e) {
-      const rect = button.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
-      
-      const ripple = document.createElement('span');
-      ripple.className = 'ripple-effect';
-      ripple.style.left = `${x}px`;
-      ripple.style.top = `${y}px`;
-      
-      button.appendChild(ripple);
-      
-      setTimeout(() => {
-        ripple.remove();
-      }, 600); // 与CSS动画时长一致
-    });
-  });
+  // 已删除
 }
 
 // 运行网络诊断
 async function runNetworkDiagnostics() {
-  try {
-    // 显示诊断状态
-    showRepairStatus('正在运行网络诊断...');
-    
-    // 隐藏之前的结果
-    hideRepairResult();
-    
-    // 调用诊断API
-    const diagnostics = await window.electronAPI.getNetworkDiagnostics();
-    
-    // 隐藏诊断状态
-    hideRepairStatus();
-    
-    // 格式化诊断结果
-    const diagnosticsOutput = document.getElementById('diagnostics-output');
-    if (diagnosticsOutput) {
-      let output = '';
-      
-      // 平台信息
-      output += `操作系统: ${diagnostics.platform}\n\n`;
-      
-      // 网络接口信息
-      output += '网络接口:\n';
-      for (const [name, interfaces] of Object.entries(diagnostics.networkInterfaces)) {
-        output += `  ${name}:\n`;
-        for (const iface of interfaces) {
-          output += `    - 地址: ${iface.address}\n`;
-          output += `      类型: ${iface.family}\n`;
-          output += `      MAC: ${iface.mac}\n`;
-          output += `      内部: ${iface.internal ? '是' : '否'}\n`;
-        }
-      }
-      output += '\n';
-      
-      // Ping 测试结果
-      output += 'Ping 测试:\n';
-      for (const [host, result] of Object.entries(diagnostics.pingResults)) {
-        output += `  ${host}: ${result.success ? '成功' : '失败'}\n`;
-        if (result.success) {
-          output += `    ${result.output.split('\n').slice(0, 3).join('\n    ')}\n`;
-        } else {
-          output += `    错误: ${result.error}\n`;
-        }
-      }
-      output += '\n';
-      
-      // DNS 测试结果
-      output += 'DNS 测试:\n';
-      for (const [host, result] of Object.entries(diagnostics.dnsResults)) {
-        output += `  ${host}: ${result.success ? '成功' : '失败'}\n`;
-        if (result.success) {
-          const dnsOutput = result.output.split('\n').slice(0, 5);
-          output += `    ${dnsOutput.join('\n    ')}\n`;
-        } else {
-          output += `    错误: ${result.error}\n`;
-        }
-      }
-      output += '\n';
-      
-      // 路由信息
-      output += '路由信息:\n';
-      if (diagnostics.routeResults.success) {
-        const routeOutput = diagnostics.routeResults.output.split('\n').slice(0, 10);
-        output += `  ${routeOutput.join('\n  ')}\n`;
-      } else {
-        output += `  错误: ${diagnostics.routeResults.error}\n`;
-      }
-      
-      diagnosticsOutput.textContent = output;
-    }
-    
-    // 显示诊断结果
-    showDiagnostics();
-    
-  } catch (error) {
-    console.error('网络诊断失败:', error);
-    hideRepairStatus();
-    showRepairResult(false, `诊断失败: ${error.message || '未知错误'}`);
-  }
+  // 已删除
 }

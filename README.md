@@ -1,14 +1,16 @@
-# ComputerHelper
+# Computer Helper
 
-一个基于Electron的跨平台电脑助手应用，支持macOS和Windows系统。
+一个基于Electron的跨平台桌面应用，提供网络控制和系统工具功能，支持macOS和Windows系统。
 
 ## 功能特点
 
-- 显示系统信息（操作系统、架构、主机名等）
-- 显示CPU详细信息
-- 显示内存使用情况
-- 跨平台支持（macOS和Windows）
-- 现代化UI界面
+- 网络控制：快速断开和恢复网络连接
+- 网络修复：提供基本、DNS、IP和高级网络修复工具
+- 应用管理：隐藏和恢复其他应用程序
+- 全局快捷键：支持自定义快捷键操作
+- 系统集成：支持开机自启动和托盘模式
+- 跨平台支持：macOS、Windows和Linux
+- 现代化UI界面：简洁易用的用户界面
 
 ## 开发环境设置
 
@@ -68,7 +70,7 @@ pnpm build:win
 ## 项目结构
 
 ```
-ComputerHelper/
+Computer Helper/
 ├── src/
 │   ├── main/        # 主进程代码
 │   ├── renderer/    # 渲染进程代码（前端UI）

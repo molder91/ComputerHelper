@@ -78,24 +78,27 @@ async function loadShortcutSettings() {
     if (result.success && result.settings) {
       // 更新快捷键设置
       if (result.settings.shortcuts) {
-        shortcutSettings.hideWindow = result.settings.shortcuts.hideWindow || 'Escape';
-        shortcutSettings.toggleNetwork = result.settings.shortcuts.toggleNetwork || '';
-        shortcutSettings.showWindow = result.settings.shortcuts.showWindow || 'Alt+Shift+S';
-        shortcutSettings.hideApp = result.settings.shortcuts.hideApp || 'CommandOrControl+Shift+H';
+        shortcutSettings.showHide = result.settings.shortcuts.showHide || DEFAULT_SHORTCUTS.showHide;
+        shortcutSettings.toggleNetwork = result.settings.shortcuts.toggleNetwork || DEFAULT_SHORTCUTS.toggleNetwork;
+        
+        // 更新UI上的快捷键显示
+        updateShortcutDisplay();
       }
-      shortcutSettings.autoHideStartup = result.settings.autoHideStartup || false;
-      shortcutSettings.startWithSystem = result.settings.startWithSystem || false;
       
       // 更新隐藏的应用列表
       if (result.settings.hiddenApps) {
         hiddenApps = result.settings.hiddenApps;
+        
+        // 更新UI上的隐藏应用列表
         updateHiddenAppsList();
       }
-
-      // 更新主题设置并应用
+      
+      // 更新主题设置
       if (result.settings.theme) {
-        themeSettings.theme = result.settings.theme || 'system';
-        console.log('从设置加载主题:', themeSettings.theme);
+        themeSettings.theme = result.settings.theme;
+        
+        // 初始化主题单选按钮
+        initThemeRadios();
       }
       
       // 更新背景颜色设置
@@ -118,8 +121,8 @@ async function loadShortcutSettings() {
         applyBackgroundColors();
       }
       
-      // 更新UI
-      updateShortcutInputs();
+      // 应用主题
+      applyTheme(themeSettings.theme);
       updateColorPickers();
       
       return result.settings;
@@ -306,19 +309,10 @@ function setTheme(theme, savePreference) {
   }
 }
 
-// 保存主题设置
+// 保存主题相关设置
 async function saveThemeSetting() {
   try {
-    // 创建要保存的设置对象，包含现有设置和主题
     const settings = {
-      shortcuts: {
-        hideWindow: shortcutSettings.hideWindow,
-        toggleNetwork: shortcutSettings.toggleNetwork,
-        showWindow: shortcutSettings.showWindow,
-        hideApp: shortcutSettings.hideApp
-      },
-      autoHideStartup: shortcutSettings.autoHideStartup,
-      startWithSystem: shortcutSettings.startWithSystem,
       theme: themeSettings.theme,
       backgroundColors: themeSettings.backgroundColors
     };
@@ -419,18 +413,28 @@ function initShortcutInputs() {
 
 // 初始化主题单选按钮
 function initThemeRadios() {
-  const themeLightRadio = document.getElementById('theme-light');
-  const themeDarkRadio = document.getElementById('theme-dark');
-  const themeSystemRadio = document.getElementById('theme-system');
+  const lightRadio = document.getElementById('theme-light');
+  const darkRadio = document.getElementById('theme-dark');
+  const systemRadio = document.getElementById('theme-system');
   
-  if (themeLightRadio && themeDarkRadio && themeSystemRadio) {
-    // 设置初始选中状态
-    themeLightRadio.checked = themeSettings.theme === 'light';
-    themeDarkRadio.checked = themeSettings.theme === 'dark';
-    themeSystemRadio.checked = themeSettings.theme === 'system';
+  // 根据当前设置选中对应单选按钮
+  if (lightRadio && darkRadio && systemRadio) {
+    // 重置所有单选按钮
+    lightRadio.checked = false;
+    darkRadio.checked = false;
+    systemRadio.checked = false;
     
-    // 添加变更事件
-    themeLightRadio.addEventListener('change', function() {
+    // 根据当前主题设置选中对应按钮
+    if (themeSettings.theme === 'light') {
+      lightRadio.checked = true;
+    } else if (themeSettings.theme === 'dark') {
+      darkRadio.checked = true;
+    } else {
+      systemRadio.checked = true;
+    }
+    
+    // 为单选按钮添加事件监听器
+    lightRadio.addEventListener('change', function() {
       if (this.checked) {
         themeSettings.theme = 'light';
         applyTheme('light'); // 立即应用新主题
@@ -438,7 +442,7 @@ function initThemeRadios() {
       }
     });
     
-    themeDarkRadio.addEventListener('change', function() {
+    darkRadio.addEventListener('change', function() {
       if (this.checked) {
         themeSettings.theme = 'dark';
         applyTheme('dark'); // 立即应用新主题
@@ -446,7 +450,7 @@ function initThemeRadios() {
       }
     });
     
-    themeSystemRadio.addEventListener('change', function() {
+    systemRadio.addEventListener('change', function() {
       if (this.checked) {
         themeSettings.theme = 'system';
         applyTheme('system'); // 立即应用新主题
@@ -951,7 +955,7 @@ function initColorPickers() {
     // 更新颜色选择器的初始值
     updateColorPickers();
     
-    // 添加变更事件
+    // 添加颜色选择器的事件监听器
     colorPicker1.addEventListener('input', function() {
       const currentTheme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
       themeSettings.backgroundColors[currentTheme].color1 = this.value;
@@ -969,7 +973,7 @@ function initColorPickers() {
     // 重置按钮事件
     resetColor1?.addEventListener('click', function() {
       const currentTheme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
-      const defaultColor = currentTheme === 'dark' ? '#1f2937' : '#667eea';
+      const defaultColor = currentTheme === 'dark' ? DEFAULT_DARK_COLORS.color1 : DEFAULT_LIGHT_COLORS.color1;
       themeSettings.backgroundColors[currentTheme].color1 = defaultColor;
       colorPicker1.value = defaultColor;
       updateGradientPreview();
@@ -978,14 +982,14 @@ function initColorPickers() {
     
     resetColor2?.addEventListener('click', function() {
       const currentTheme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
-      const defaultColor = currentTheme === 'dark' ? '#111827' : '#764ba2';
+      const defaultColor = currentTheme === 'dark' ? DEFAULT_DARK_COLORS.color2 : DEFAULT_LIGHT_COLORS.color2;
       themeSettings.backgroundColors[currentTheme].color2 = defaultColor;
       colorPicker2.value = defaultColor;
       updateGradientPreview();
       applyBackgroundColors(); // 立即应用到背景
     });
     
-    // 保存渐变设置按钮事件
+    // 保存按钮事件
     saveGradientBtn?.addEventListener('click', function() {
       // 保存颜色设置并显示反馈
       saveGradientSettings();
@@ -1023,30 +1027,8 @@ function applyBackgroundColors() {
   try {
     const currentTheme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
     console.log('应用背景颜色，当前主题:', currentTheme);
-    
-    // 确保背景颜色存在
-    if (!themeSettings.backgroundColors || !themeSettings.backgroundColors[currentTheme]) {
-      console.warn('背景颜色设置不完整，使用默认值');
-      const defaultColors = {
-        light: { color1: '#667eea', color2: '#764ba2' },
-        dark: { color1: '#1f2937', color2: '#111827' }
-      };
-      
-      // 如果背景颜色设置不存在，初始化它
-      if (!themeSettings.backgroundColors) {
-        themeSettings.backgroundColors = defaultColors;
-      }
-      
-      // 如果当前主题的背景颜色不存在，初始化它
-      if (!themeSettings.backgroundColors[currentTheme]) {
-        themeSettings.backgroundColors[currentTheme] = defaultColors[currentTheme];
-      }
-    }
-    
     const color1 = themeSettings.backgroundColors[currentTheme].color1;
     const color2 = themeSettings.backgroundColors[currentTheme].color2;
-    
-    console.log(`应用背景颜色: color1=${color1}, color2=${color2}`);
     
     // 更新CSS变量
     document.documentElement.style.setProperty('--gradient-color-1', color1);
@@ -1055,7 +1037,7 @@ function applyBackgroundColors() {
     // 更新颜色选择器
     updateColorPickers();
   } catch (error) {
-    console.error('应用背景颜色失败:', error);
+    console.error('应用背景颜色错误:', error);
   }
 }
 
@@ -1085,66 +1067,24 @@ function toggleSettings() {
 // 保存渐变设置
 async function saveGradientSettings() {
   try {
-    // 获取当前主题和颜色
-    const currentTheme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
-    const color1 = themeSettings.backgroundColors[currentTheme].color1;
-    const color2 = themeSettings.backgroundColors[currentTheme].color2;
-    
-    console.log(`保存渐变设置: ${currentTheme}主题, 颜色1=${color1}, 颜色2=${color2}`);
-    
-    // 创建要保存的设置对象
-    const settings = {
-      shortcuts: {
-        hideWindow: shortcutSettings.hideWindow,
-        toggleNetwork: shortcutSettings.toggleNetwork,
-        showWindow: shortcutSettings.showWindow,
-        hideApp: shortcutSettings.hideApp
-      },
-      autoHideStartup: shortcutSettings.autoHideStartup,
-      startWithSystem: shortcutSettings.startWithSystem,
-      theme: themeSettings.theme,
-      backgroundColors: themeSettings.backgroundColors
-    };
-    
-    // 保存设置
-    const saveBtn = document.getElementById('save-gradient');
-    if (saveBtn) {
-      // 更改按钮状态为保存中
-      const originalText = saveBtn.textContent;
-      saveBtn.textContent = '保存中...';
-      saveBtn.disabled = true;
+    // 显示保存中状态
+    const saveButton = document.getElementById('save-gradient');
+    if (saveButton) {
+      const originalText = saveButton.textContent;
+      saveButton.textContent = '保存中...';
+      saveButton.disabled = true;
       
-      const result = await window.electronAPI.saveSettings(settings);
+      // 保存设置
+      await saveThemeSetting();
       
-      if (result && result.success) {
-        // 显示保存成功状态
-        saveBtn.textContent = '✓ 已保存';
-        saveBtn.classList.add('success');
-        
-        // 2秒后恢复按钮状态
-        setTimeout(() => {
-          saveBtn.textContent = originalText;
-          saveBtn.disabled = false;
-          saveBtn.classList.remove('success');
-        }, 2000);
-        
-        console.log('渐变设置保存成功');
-      } else {
-        saveBtn.textContent = '❌ 保存失败';
-        saveBtn.classList.add('error');
-        
-        // 2秒后恢复按钮状态
-        setTimeout(() => {
-          saveBtn.textContent = originalText;
-          saveBtn.disabled = false;
-          saveBtn.classList.remove('error');
-        }, 2000);
-        
-        console.error('渐变设置保存失败:', result?.message || '未知错误');
-      }
-    } else {
-      await window.electronAPI.saveSettings(settings);
-      console.log('渐变设置已保存');
+      // 显示成功状态
+      saveButton.textContent = '已保存';
+      
+      // 3秒后恢复原始状态
+      setTimeout(() => {
+        saveButton.textContent = originalText;
+        saveButton.disabled = false;
+      }, 3000);
     }
   } catch (error) {
     console.error('保存渐变设置失败:', error);

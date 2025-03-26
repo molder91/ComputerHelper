@@ -13,43 +13,60 @@
   --primary-hover: #005ba1;
   --danger-color: #f44336;
   --danger-hover: #d32f2f;
-  --success-color: #4CAF50;
-  --success-hover: #388E3C;
-  --glass-blur: blur(15px);
-  
-  /* 亮色主题变量 */
-  --card-bg: rgba(255, 255, 255, 0.15);
-  --card-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-  --card-hover-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
+  --success-color: #4caf50;
+  --success-hover: #388e3c;
+  --warning-color: #ff9800;
+  --warning-hover: #f57c00;
+  --text-color: #333;
+  --text-light: #666;
+  --text-lighter: #999;
+  --text-inverted: #fff;
+  --link-color: #0070f3;
+  --link-hover: #005bb5;
+  --border-color: rgba(0, 0, 0, 0.1);
+  --card-bg: rgba(255, 255, 255, 0.8);
+  --card-border: rgba(255, 255, 255, 0.2);
+  --card-shadow: 0 4px 6px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+  --card-hover-shadow: 0 8px 12px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(255, 255, 255, 0.2) inset;
+  --glass-blur: blur(10px);
   --glass-border: 1px solid rgba(255, 255, 255, 0.2);
-  --text-color: rgba(255, 255, 255, 0.9);
-  --text-color-secondary: rgba(255, 255, 255, 0.7);
-  --text-color-primary: rgba(255, 255, 255, 0.95);
-  --body-bg: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  --header-border: 1px solid rgba(255, 255, 255, 0.1);
-  --card-border-hover: 1px solid rgba(255, 255, 255, 0.3);
-  --settings-hover-bg: rgba(255, 255, 255, 0.05);
-  
-  /* 渐变色 - 可自定义 */
+  --body-bg: #f5f7fa;
   --gradient-color-1: #667eea;
   --gradient-color-2: #764ba2;
+  --gray-100: #f3f4f6;
+  --gray-200: #e5e7eb;
+  --gray-300: #d1d5db;
+  --gray-400: #9ca3af;
+  --gray-500: #6b7280;
+  --gray-600: #4b5563;
+  --gray-700: #374151;
+  --gray-800: #1f2937;
+  --gray-900: #111827;
+  
+  /* 动画时间 */
+  --transition-fast: 150ms;
+  --transition-normal: 300ms;
+  --transition-slow: 500ms;
+  
+  /* 响应式大小 */
+  --mobile: 576px;
+  --tablet: 768px;
+  --desktop: 992px;
+  --large-desktop: 1200px;
 }
 
 [data-theme="dark"] {
   /* 暗色主题变量 */
-  --card-bg: rgba(0, 0, 0, 0.25);
-  --card-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-  --card-hover-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
-  --glass-border: 1px solid rgba(255, 255, 255, 0.1);
-  --text-color: rgba(255, 255, 255, 0.85);
-  --text-color-secondary: rgba(255, 255, 255, 0.6);
-  --text-color-primary: rgba(255, 255, 255, 0.9);
-  --body-bg: linear-gradient(135deg, #1f2937 0%, #111827 100%);
-  --header-border: 1px solid rgba(255, 255, 255, 0.05);
-  --card-border-hover: 1px solid rgba(255, 255, 255, 0.2);
-  --settings-hover-bg: rgba(255, 255, 255, 0.03);
-  
-  /* 暗色渐变 - 可自定义 */
+  --text-color: #e5e7eb;
+  --text-light: #d1d5db;
+  --text-lighter: #9ca3af;
+  --text-inverted: #111;
+  --body-bg: #111827;
+  --card-bg: rgba(30, 41, 59, 0.8);
+  --card-border: rgba(255, 255, 255, 0.05);
+  --card-shadow: 0 4px 6px rgba(0, 0, 0, 0.2), 0 1px 3px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+  --card-hover-shadow: 0 8px 12px rgba(0, 0, 0, 0.3), 0 2px 4px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+  --border-color: rgba(255, 255, 255, 0.1);
   --gradient-color-1: #1f2937;
   --gradient-color-2: #111827;
 }
@@ -156,19 +173,29 @@ body {
 
 @keyframes blobMove {
   0% {
-    transform: translate(0, 0) scale(1);
+    top: 20%;
+    left: 20%;
+    transform: scale(1);
   }
   25% {
-    transform: translate(10%, 15%) scale(1.1);
+    top: 30%;
+    left: 60%;
+    transform: scale(1.2);
   }
   50% {
-    transform: translate(-5%, 5%) scale(0.95);
+    top: 60%;
+    left: 40%;
+    transform: scale(0.8);
   }
   75% {
-    transform: translate(-15%, -10%) scale(1.05);
+    top: 40%;
+    left: 25%;
+    transform: scale(1.1);
   }
   100% {
-    transform: translate(5%, -15%) scale(1);
+    top: 20%;
+    left: 50%;
+    transform: scale(1);
   }
 }
 
@@ -178,10 +205,11 @@ body {
   top: 20px;
   right: 20px;
   display: flex;
-  gap: 12px;
+  gap: 10px;
   z-index: 10;
 }
 
+/* 控制按钮公共样式 */
 .control-button {
   width: 42px;
   height: 42px;
@@ -211,18 +239,11 @@ body {
   transition: all 0.3s ease;
 }
 
-/* 设置按钮旋转效果 */
-.settings-toggle:hover svg {
-  transform: rotate(30deg);
-}
-
-/* 修复主题图标显示 */
-.sun-icon, .moon-icon {
+/* 主题按钮特殊样式 */
+.theme-toggle svg {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  transition: opacity 0.3s ease, transform 0.5s ease;
+  transition: transform 0.5s cubic-bezier(0.23, 1, 0.32, 1), 
+              opacity 0.5s cubic-bezier(0.23, 1, 0.32, 1);
 }
 
 /* 默认显示太阳图标 */

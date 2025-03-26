@@ -9,6 +9,7 @@
 :root {
   /* 共享变量 */
   --primary-color: #0070c9;
+  --primary-color-rgb: 0, 112, 201;
   --primary-hover: #005ba1;
   --danger-color: #f44336;
   --danger-hover: #d32f2f;
@@ -71,80 +72,175 @@ body {
   width: 100%;
   height: 100%;
   z-index: -2;
+  overflow: hidden;
+}
+
+/* 创建多个渐变层以实现熔岩灯效果 */
+.animated-gradient::before,
+.animated-gradient::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
   background: linear-gradient(135deg, 
     var(--gradient-color-1) 0%, 
     var(--gradient-color-2) 100%);
   background-size: 400% 400%;
-  animation: gradientAnimation 15s ease infinite;
+  opacity: 0.7;
+  mix-blend-mode: screen;
 }
 
-@keyframes gradientAnimation {
+.animated-gradient::before {
+  animation: gradientFlow1 20s ease infinite;
+  filter: blur(20px);
+}
+
+.animated-gradient::after {
+  animation: gradientFlow2 17s ease-in-out infinite alternate;
+  filter: blur(30px);
+}
+
+/* 添加第三个漂浮元素 */
+.animated-gradient .blob {
+  position: absolute;
+  width: 60%;
+  height: 60%;
+  background: radial-gradient(circle, 
+    var(--gradient-color-1) 0%, 
+    var(--gradient-color-2) 70%);
+  border-radius: 50%;
+  filter: blur(40px);
+  opacity: 0.6;
+  top: 20%;
+  left: 20%;
+  animation: blobMove 23s ease-in-out infinite alternate;
+}
+
+@keyframes gradientFlow1 {
   0% {
-    background-position: 0% 50%;
+    background-position: 0% 0%;
+    transform: scale(1);
+  }
+  25% {
+    background-position: 50% 50%;
   }
   50% {
-    background-position: 100% 50%;
+    background-position: 100% 100%;
+    transform: scale(1.05);
+  }
+  75% {
+    background-position: 50% 50%;
   }
   100% {
-    background-position: 0% 50%;
+    background-position: 0% 0%;
+    transform: scale(1);
   }
 }
 
-/* 主题切换按钮 */
-.theme-toggle {
+@keyframes gradientFlow2 {
+  0% {
+    background-position: 100% 0%;
+    transform: scale(1.05);
+  }
+  50% {
+    background-position: 0% 100%;
+    transform: scale(1);
+  }
+  100% {
+    background-position: 100% 0%;
+    transform: scale(1.05);
+  }
+}
+
+@keyframes blobMove {
+  0% {
+    transform: translate(0, 0) scale(1);
+  }
+  25% {
+    transform: translate(10%, 15%) scale(1.1);
+  }
+  50% {
+    transform: translate(-5%, 5%) scale(0.95);
+  }
+  75% {
+    transform: translate(-15%, -10%) scale(1.05);
+  }
+  100% {
+    transform: translate(5%, -15%) scale(1);
+  }
+}
+
+/* 头部控制按钮组 */
+.header-controls {
   position: absolute;
   top: 20px;
   right: 20px;
+  display: flex;
+  gap: 12px;
+  z-index: 10;
+}
+
+.control-button {
+  width: 42px;
+  height: 42px;
   background: var(--card-bg);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
   border: var(--glass-border);
   border-radius: 50%;
-  width: 40px;
-  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   box-shadow: var(--card-shadow);
   transition: all 0.3s ease;
-  z-index: 10;
   overflow: hidden;
 }
 
-.theme-toggle:hover {
-  transform: translateY(-2px);
+.control-button:hover {
+  transform: translateY(-3px);
   box-shadow: var(--card-hover-shadow);
 }
 
-.theme-toggle svg {
-  position: absolute;
-  width: 20px;
-  height: 20px;
+.control-button svg {
+  width: 22px;
+  height: 22px;
   fill: var(--text-color);
-  transition: transform 0.5s ease, opacity 0.5s ease;
+  transition: all 0.3s ease;
 }
 
-/* 图标显示控制 */
+/* 设置按钮旋转效果 */
+.settings-toggle:hover svg {
+  transform: rotate(30deg);
+}
+
+/* 修复主题图标显示 */
+.sun-icon, .moon-icon {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  transition: opacity 0.3s ease, transform 0.5s ease;
+}
+
+/* 默认显示太阳图标 */
 .sun-icon {
   opacity: 1;
-  transform: scale(1);
 }
 
 .moon-icon {
   opacity: 0;
-  transform: scale(0);
 }
 
-/* 暗色模式图标切换 */
+/* 暗色模式显示月亮图标 */
 [data-theme="dark"] .sun-icon {
   opacity: 0;
-  transform: scale(0);
 }
 
 [data-theme="dark"] .moon-icon {
   opacity: 1;
-  transform: scale(1);
 }
 
 /* 背景形状 */
@@ -945,102 +1041,136 @@ footer {
 
 /* 响应式调整 */
 @media (max-width: 768px) {
+  .theme-option-container {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .color-pickers {
+    flex-direction: column;
+  }
+  
+  .color-picker-container {
+    flex-wrap: wrap;
+  }
+  
+  .color-picker-container label {
+    width: 100%;
+    margin-bottom: 10px;
+  }
+  
+  .reset-color-btn {
+    margin-left: 10px;
+  }
+  
   main {
     grid-template-columns: 1fr;
   }
   
-  .info-grid, .cpu-grid, .tools-grid {
-    grid-template-columns: 1fr;
-  }
-  
-  header h1 {
-    font-size: 2rem;
-  }
-  
   .network-status {
     flex-direction: column;
-  }
-  
-  .network-actions {
-    flex-direction: column;
-  }
-  
-  .repair-options {
-    grid-template-columns: 1fr;
   }
 }
 
 /* 主题设置 */
 .theme-setting {
-  margin-top: 10px;
+  margin-top: 20px;
 }
 
 .theme-option-container {
   display: flex;
   gap: 15px;
-  margin-top: 10px;
+  margin-top: 15px;
 }
 
 .theme-option {
-  display: flex;
-  align-items: center;
-  cursor: pointer;
-  padding: 8px 15px;
-  background: var(--card-bg);
-  border: var(--glass-border);
-  border-radius: 12px;
-  transition: all 0.3s ease;
+  position: relative;
   flex: 1;
+  cursor: pointer;
+  overflow: hidden;
+  border-radius: 14px;
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
 }
 
-.theme-option:hover {
-  background: rgba(255, 255, 255, 0.1);
+.theme-option .option-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 20px 15px;
+  background: var(--card-bg);
+  border-radius: 12px;
+  transition: all 0.3s ease;
+}
+
+.theme-option:hover .option-content {
+  background: rgba(255, 255, 255, 0.15);
   transform: translateY(-2px);
 }
 
 .theme-option input[type="radio"] {
-  margin-right: 10px;
-  cursor: pointer;
-  width: 16px;
-  height: 16px;
-  accent-color: var(--primary-color);
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.theme-option input[type="radio"]:checked + .option-content {
+  background: rgba(var(--primary-color-rgb), 0.2);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+.theme-option input[type="radio"]:checked + .option-content::after {
+  content: "";
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background-color: var(--primary-color);
+  box-shadow: 0 0 5px rgba(var(--primary-color-rgb), 0.5);
+}
+
+.theme-option:has(input[type="radio"]:checked) {
+  border-color: var(--primary-color);
+}
+
+.option-icon {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  margin-bottom: 5px;
+}
+
+.option-icon svg {
+  width: 28px;
+  height: 28px;
+  fill: var(--text-color);
+}
+
+.light-icon {
+  background: radial-gradient(circle, rgba(255, 236, 168, 0.3) 0%, rgba(255, 223, 87, 0.1) 100%);
+}
+
+.dark-icon {
+  background: radial-gradient(circle, rgba(103, 110, 149, 0.3) 0%, rgba(53, 59, 75, 0.1) 100%);
+}
+
+.system-icon {
+  background: radial-gradient(circle, rgba(120, 177, 255, 0.3) 0%, rgba(56, 133, 250, 0.1) 100%);
 }
 
 .theme-option span {
   color: var(--text-color);
   font-weight: 500;
-}
-
-/* 响应式样式 */
-@media (max-width: 768px) {
-  main {
-    grid-template-columns: 1fr;
-  }
-
-  .info-grid, .cpu-grid, .tools-grid {
-    grid-template-columns: 1fr;
-  }
-
-  header h1 {
-    font-size: 2rem;
-  }
-
-  .network-status {
-    flex-direction: column;
-  }
-
-  .network-actions {
-    margin-top: 15px;
-  }
-
-  .repair-options {
-    grid-template-columns: 1fr;
-  }
-  
-  .theme-option-container {
-    flex-direction: column;
-    gap: 8px;
-  }
+  font-size: 0.95rem;
 }
 
 /* 背景颜色自定义 */
@@ -1058,26 +1188,41 @@ footer {
 .color-picker-container {
   display: flex;
   align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
+  gap: 12px;
+  background: var(--card-bg);
+  border-radius: 12px;
+  padding: 15px;
+  transition: all 0.3s ease;
+}
+
+.color-picker-container:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: translateY(-2px);
 }
 
 .color-picker-container label {
-  width: 100px;
+  width: 120px;
   color: var(--text-color);
   font-weight: 500;
   margin-bottom: 0;
+  font-size: 0.9rem;
 }
 
 .color-picker {
-  height: 40px;
-  width: 60px;
+  height: 44px;
+  width: 80px;
   border: none;
   border-radius: 8px;
   cursor: pointer;
   background: transparent;
   padding: 0;
   overflow: hidden;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s ease;
+}
+
+.color-picker:hover {
+  transform: scale(1.05);
 }
 
 .color-picker::-webkit-color-swatch-wrapper {
@@ -1087,17 +1232,17 @@ footer {
 .color-picker::-webkit-color-swatch {
   border: none;
   border-radius: 8px;
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.2);
 }
 
 .reset-color-btn {
+  margin-left: auto;
   padding: 8px 12px;
   background: rgba(255, 255, 255, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 8px;
   color: var(--text-color);
   cursor: pointer;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   transition: all 0.3s ease;
 }
 
@@ -1107,22 +1252,41 @@ footer {
 }
 
 .gradient-preview {
-  height: 40px;
+  height: 60px;
   border-radius: 12px;
-  margin-top: 15px;
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.2);
+  margin-top: 20px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
   background: linear-gradient(135deg, var(--gradient-color-1) 0%, var(--gradient-color-2) 100%);
-  transition: background 0.3s ease;
+  transition: all 0.3s ease;
 }
 
-@media (min-width: 768px) {
-  .color-pickers {
-    flex-direction: row;
-    align-items: center;
-  }
-  
-  .color-picker-container label {
-    width: auto;
-    margin-right: 10px;
-  }
+.gradient-preview:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+}
+
+.gradient-actions {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.gradient-actions .action-button {
+  min-width: 180px;
+  padding: 10px 20px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  border-radius: 8px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s ease;
+}
+
+.gradient-actions .action-button.success {
+  background-color: var(--success-color);
+  color: white;
+}
+
+.gradient-actions .action-button.error {
+  background-color: var(--danger-color);
+  color: white;
 }

@@ -603,3 +603,72 @@ ipcMain.handle('toggle-network', async (event, enable) => {
   // 使用封装好的toggleNetwork函数
   return await toggleNetwork(enable);
 });
+
+// 保存设置的IPC处理器
+ipcMain.handle('save-settings', async (event, settings) => {
+  try {
+    console.log('正在保存设置到存储:', settings);
+    
+    // 确保主题设置包含完整的结构
+    if (settings.theme) {
+      store.set('theme', settings.theme);
+    }
+    
+    // 确保背景颜色设置包含完整的结构
+    if (settings.backgroundColors) {
+      console.log('保存背景颜色设置:', settings.backgroundColors);
+      store.set('backgroundColors', settings.backgroundColors);
+    }
+    
+    // 保存快捷键设置
+    if (settings.shortcuts) {
+      store.set('shortcuts', settings.shortcuts);
+    }
+    
+    // 保存其他设置
+    if (settings.autoHideStartup !== undefined) {
+      store.set('autoHideStartup', settings.autoHideStartup);
+    }
+    
+    if (settings.startWithSystem !== undefined) {
+      store.set('startWithSystem', settings.startWithSystem);
+      // 更新开机自启动设置
+      app.setLoginItemSettings({
+        openAtLogin: settings.startWithSystem,
+        openAsHidden: settings.autoHideStartup || false
+      });
+    }
+    
+    // 保存隐藏的应用列表
+    if (settings.hiddenApps) {
+      store.set('hiddenApps', settings.hiddenApps);
+    }
+    
+    console.log('设置已保存到存储');
+    return { success: true, message: '设置已保存' };
+  } catch (error) {
+    console.error('保存设置失败:', error);
+    return { success: false, message: `保存设置失败: ${error.message}` };
+  }
+});
+
+// 加载设置的IPC处理器
+ipcMain.handle('load-settings', async () => {
+  try {
+    console.log('从存储加载设置');
+    const settings = {
+      shortcuts: store.get('shortcuts'),
+      autoHideStartup: store.get('autoHideStartup'),
+      startWithSystem: store.get('startWithSystem'),
+      theme: store.get('theme'),
+      backgroundColors: store.get('backgroundColors'),
+      hiddenApps: store.get('hiddenApps')
+    };
+    
+    console.log('加载的设置:', settings);
+    return { success: true, settings };
+  } catch (error) {
+    console.error('加载设置失败:', error);
+    return { success: false, message: `加载设置失败: ${error.message}` };
+  }
+});

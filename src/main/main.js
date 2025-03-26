@@ -26,6 +26,7 @@ const store = new Store({
     },
     autoHideStartup: false,
     startWithSystem: false,
+    theme: 'system', // 默认跟随系统主题
     hiddenApps: [] // 存储已隐藏的应用列表
   }
 });
@@ -261,17 +262,43 @@ async function toggleNetwork(enable) {
       }
     } else if (platform === 'win32') {
       // Windows 系统
-      if (enable) {
-        // 开启网络
-        await execPromise('netsh interface set interface "Wi-Fi" enable');
-        await execPromise('netsh interface set interface "Ethernet" enable');
-        result = { success: true, message: '网络已恢复' };
-      } else {
-        // 关闭网络
-        await execPromise('netsh interface set interface "Wi-Fi" disable');
-        await execPromise('netsh interface set interface "Ethernet" disable');
-        result = { success: true, message: '网络已断开' };
+      console.log(`Windows: ${enable ? 'Enabling' : 'Disabling'} network...`);
+      let wifiSuccess = false;
+      let ethernetSuccess = false;
+      const interfaceWifi = '"Wi-Fi"'; // Keep original name for now
+      const interfaceEthernet = '"Ethernet"'; // Keep original name for now
+      const action = enable ? 'enable' : 'disable';
+
+      try {
+        console.log(`Executing: netsh interface set interface ${interfaceWifi} ${action}`);
+        const { stdout, stderr } = await execPromise(`netsh interface set interface ${interfaceWifi} ${action}`);
+        console.log(`Wi-Fi ${action} stdout:`, stdout);
+        if (stderr) console.error(`Wi-Fi ${action} stderr:`, stderr);
+        // Simple check: if no error thrown, assume success for this interface
+        wifiSuccess = true;
+      } catch (error) {
+        console.error(`Failed to ${action} Wi-Fi:`, error.message);
+        // Optionally log the full error: console.error(error);
       }
+
+      try {
+        console.log(`Executing: netsh interface set interface ${interfaceEthernet} ${action}`);
+        const { stdout, stderr } = await execPromise(`netsh interface set interface ${interfaceEthernet} ${action}`);
+        console.log(`Ethernet ${action} stdout:`, stdout);
+        if (stderr) console.error(`Ethernet ${action} stderr:`, stderr);
+        ethernetSuccess = true;
+      } catch (error) {
+        console.error(`Failed to ${action} Ethernet:`, error.message);
+         // Optionally log the full error: console.error(error);
+      }
+
+      const overallSuccess = wifiSuccess || ethernetSuccess; // Consider success if at least one interface was toggled
+      result = {
+        success: overallSuccess,
+        message: overallSuccess
+          ? `网络操作尝试完成 (Wi-Fi: ${wifiSuccess ? '成功' : '失败'}, Ethernet: ${ethernetSuccess ? '成功' : '失败'})`
+          : '网络操作失败，请检查日志或尝试以管理员身份运行。'
+      };
     } else if (platform === 'linux') {
       // Linux 系统
       if (enable) {

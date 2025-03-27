@@ -5,36 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Computer Helper</title>
   <link rel="stylesheet" href="styles.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 </head>
 <body>
-  <!-- 动态背景 -->
-  <div class="animated-gradient">
-    <div class="blob"></div>
-  </div>
-  
   <div class="background-shapes">
     <div class="shape shape-1"></div>
     <div class="shape shape-2"></div>
     <div class="shape shape-3"></div>
   </div>
-
-  <!-- 头部控制按钮组 -->
-  <div class="header-controls">
-    <!-- 设置按钮 -->
-    <div class="control-button settings-toggle" id="settings-toggle">
-      <i class="fa-solid fa-gear"></i>
-    </div>
-    
-    <!-- 主题切换按钮 -->
-    <div class="control-button theme-toggle" id="theme-toggle">
-      <!-- 太阳图标(亮色模式) -->
-      <i class="fa-solid fa-sun sun-icon"></i>
-      <!-- 月亮图标(暗色模式) -->
-      <i class="fa-solid fa-moon moon-icon"></i>
-    </div>
-  </div>
-
   <div class="container">
     <header>
       <h1>Computer Helper</h1>
@@ -98,68 +75,16 @@
               <span>开机自动启动</span>
             </label>
           </div>
-          
-          <!-- 主题设置 -->
-          <div class="setting-item theme-setting">
-            <label>主题模式:</label>
-            <div class="theme-option-container">
-              <label class="theme-option">
-                <input type="radio" name="theme" value="light" id="theme-light">
-                <div class="option-content">
-                  <div class="option-icon light-icon">
-                    <i class="fa-solid fa-sun"></i>
-                  </div>
-                  <span>浅色</span>
-                </div>
-              </label>
-              <label class="theme-option">
-                <input type="radio" name="theme" value="dark" id="theme-dark">
-                <div class="option-content">
-                  <div class="option-icon dark-icon">
-                    <i class="fa-solid fa-moon"></i>
-                  </div>
-                  <span>深色</span>
-                </div>
-              </label>
-              <label class="theme-option">
-                <input type="radio" name="theme" value="system" id="theme-system">
-                <div class="option-content">
-                  <div class="option-icon system-icon">
-                    <i class="fa-solid fa-circle-half-stroke"></i>
-                  </div>
-                  <span>跟随系统</span>
-                </div>
-              </label>
-            </div>
-          </div>
-          
-          <!-- 背景颜色自定义 -->
-          <div class="setting-item background-setting">
-            <label>背景颜色自定义:</label>
-            <div class="color-pickers">
-              <div class="color-picker-container">
-                <label>渐变起始色:</label>
-                <input type="color" id="gradient-color-1" class="color-picker">
-                <button id="reset-color-1" class="reset-color-btn">重置</button>
-              </div>
-              <div class="color-picker-container">
-                <label>渐变结束色:</label>
-                <input type="color" id="gradient-color-2" class="color-picker">
-                <button id="reset-color-2" class="reset-color-btn">重置</button>
-              </div>
-            </div>
-            <div class="gradient-preview" id="gradient-preview"></div>
-          </div>
-          
           <div class="setting-actions">
-            <button id="cancel-settings" class="action-button secondary">取消</button>
+            <button id="save-settings" class="action-button primary">保存设置</button>
+            <button id="cancel-settings" class="action-button">取消</button>
           </div>
         </div>
       </section>
     </main>
 
     <footer>
-      <p>Computer Helper v0.0.2 - 网络控制 | 应用管理 | 系统工具 - 支持 macOS和Windows</p>
+      <p>Computer Helper v0.0.1 - 网络控制 | 应用管理 | 系统工具 - 支持 macOS, Windows 和 Linux</p>
     </footer>
   </div>
 

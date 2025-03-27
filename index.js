@@ -25,6 +25,22 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // 添加设置按钮事件监听
   document.getElementById('settings-toggle').addEventListener('click', toggleSettings);
+  
+  // 添加保存设置按钮事件监听
+  const saveSettingsBtn = document.getElementById('save-settings');
+  saveSettingsBtn?.addEventListener('click', saveShortcutSettings);
+  
+  // 添加页面刷新前的确认，防止设置丢失
+  window.addEventListener('beforeunload', (e) => {
+    // 检查设置面板是否打开
+    const settingsSection = document.getElementById('settings-section');
+    if (settingsSection && !settingsSection.classList.contains('hidden')) {
+      // 设置确认信息，在大多数现代浏览器中只会显示通用消息
+      e.preventDefault();
+      e.returnValue = '确定要刷新页面吗？所有未保存的设置将丢失。';
+      return e.returnValue;
+    }
+  });
 });
 
 // 存储快捷键设置
@@ -35,6 +51,14 @@ const shortcutSettings = {
   hideApp: 'CommandOrControl+Shift+H',  // 隐藏应用快捷键
   autoHideStartup: false,
   startWithSystem: false
+};
+
+// 默认快捷键设置
+const DEFAULT_SHORTCUTS = {
+  hideWindow: 'Escape',
+  toggleNetwork: '',
+  showWindow: 'Alt+Shift+S',
+  hideApp: 'CommandOrControl+Shift+H'
 };
 
 // 主题设置
@@ -89,11 +113,10 @@ async function loadShortcutSettings() {
     if (result.success && result.settings) {
       // 更新快捷键设置
       if (result.settings.shortcuts) {
-        shortcutSettings.showHide = result.settings.shortcuts.showHide || DEFAULT_SHORTCUTS.showHide;
+        shortcutSettings.hideWindow = result.settings.shortcuts.hideWindow || DEFAULT_SHORTCUTS.hideWindow;
         shortcutSettings.toggleNetwork = result.settings.shortcuts.toggleNetwork || DEFAULT_SHORTCUTS.toggleNetwork;
-        
-        // 更新UI上的快捷键显示
-        updateShortcutDisplay();
+        shortcutSettings.showWindow = result.settings.shortcuts.showWindow || DEFAULT_SHORTCUTS.showWindow;
+        shortcutSettings.hideApp = result.settings.shortcuts.hideApp || DEFAULT_SHORTCUTS.hideApp;
       }
       
       // 更新隐藏的应用列表
@@ -973,7 +996,6 @@ function initColorPickers() {
   const resetColor1 = document.getElementById('reset-color-1');
   const resetColor2 = document.getElementById('reset-color-2');
   const gradientPreview = document.getElementById('gradient-preview');
-  const saveGradientBtn = document.getElementById('save-gradient');
   
   if (colorPicker1 && colorPicker2) {
     // 更新颜色选择器的初始值
@@ -1012,12 +1034,6 @@ function initColorPickers() {
       updateGradientPreview();
       applyBackgroundColors(); // 立即应用到背景
     });
-    
-    // 保存按钮事件
-    saveGradientBtn?.addEventListener('click', function() {
-      // 保存颜色设置并显示反馈
-      saveGradientSettings();
-    });
   }
 }
 
@@ -1054,6 +1070,9 @@ function applyBackgroundColors() {
     const color1 = themeSettings.backgroundColors[currentTheme].color1;
     const color2 = themeSettings.backgroundColors[currentTheme].color2;
     
+    // 确保颜色被持久化到存储
+    saveThemeSetting();
+    
     // 更新CSS变量
     document.documentElement.style.setProperty('--gradient-color-1', color1);
     document.documentElement.style.setProperty('--gradient-color-2', color2);
@@ -1085,33 +1104,5 @@ function toggleSettings() {
       // 显示主要卡片
       document.getElementById('network-control').classList.remove('hidden');
     }
-  }
-}
-
-// 保存渐变设置
-async function saveGradientSettings() {
-  try {
-    // 显示保存中状态
-    const saveButton = document.getElementById('save-gradient');
-    if (saveButton) {
-      const originalText = saveButton.textContent;
-      saveButton.textContent = '保存中...';
-      saveButton.disabled = true;
-      
-      // 保存设置
-      await saveThemeSetting();
-      
-      // 显示成功状态
-      saveButton.textContent = '已保存';
-      
-      // 3秒后恢复原始状态
-      setTimeout(() => {
-        saveButton.textContent = originalText;
-        saveButton.disabled = false;
-      }, 3000);
-    }
-  } catch (error) {
-    console.error('保存渐变设置失败:', error);
-    alert('保存渐变设置失败，请查看控制台了解详情');
   }
 } 

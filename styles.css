@@ -21,6 +21,8 @@
   --text-light: #666;
   --text-lighter: #999;
   --text-inverted: #fff;
+  --text-color-primary: #333;
+  --text-color-secondary: #666;
   --link-color: #0070f3;
   --link-hover: #005bb5;
   --border-color: rgba(0, 0, 0, 0.1);
@@ -61,6 +63,8 @@
   --text-light: #d1d5db;
   --text-lighter: #9ca3af;
   --text-inverted: #111;
+  --text-color-primary: #e5e7eb;
+  --text-color-secondary: #d1d5db;
   --body-bg: #111827;
   --card-bg: rgba(30, 41, 59, 0.8);
   --card-border: rgba(255, 255, 255, 0.05);
@@ -1288,18 +1292,22 @@ footer {
 
 .gradient-actions {
   display: flex;
-  justify-content: center;
-  margin-top: 20px;
+  justify-content: flex-end;
+  margin-top: 15px;
 }
 
 .gradient-actions .action-button {
-  min-width: 180px;
-  padding: 10px 20px;
-  font-weight: 500;
-  letter-spacing: 0.5px;
-  border-radius: 8px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
-  transition: all 0.3s ease;
+  padding: 8px 15px;
+  font-size: 0.9rem;
+  min-width: 100px;
+  max-width: 180px;
+}
+
+/* Space between gradient and setting action buttons to visually separate them */
+.setting-actions {
+  margin-top: 30px;
+  padding-top: 15px;
+  border-top: 1px solid var(--border-color);
 }
 
 .gradient-actions .action-button.success {

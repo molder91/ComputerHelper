@@ -25,6 +25,10 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // 添加设置按钮事件监听
   document.getElementById('settings-toggle').addEventListener('click', toggleSettings);
+  
+  // 添加保存设置按钮事件监听
+  const saveSettingsBtn = document.getElementById('save-settings');
+  saveSettingsBtn?.addEventListener('click', saveShortcutSettings);
 });
 
 // 存储快捷键设置
@@ -35,6 +39,14 @@ const shortcutSettings = {
   hideApp: 'CommandOrControl+Shift+H',  // 隐藏应用快捷键
   autoHideStartup: false,
   startWithSystem: false
+};
+
+// 默认快捷键设置
+const DEFAULT_SHORTCUTS = {
+  hideWindow: 'Escape',
+  toggleNetwork: '',
+  showWindow: 'Alt+Shift+S',
+  hideApp: 'CommandOrControl+Shift+H'
 };
 
 // 主题设置
@@ -50,6 +62,17 @@ let themeSettings = {
       color2: '#111827'  // 默认暗色渐变结束色
     }
   }
+};
+
+// Default background colors
+const DEFAULT_LIGHT_COLORS = {
+  color1: '#667eea', // Default light gradient start color
+  color2: '#764ba2'  // Default light gradient end color
+};
+
+const DEFAULT_DARK_COLORS = {
+  color1: '#1f2937', // Default dark gradient start color
+  color2: '#111827'  // Default dark gradient end color
 };
 
 // 存储隐藏的应用列表
@@ -82,7 +105,7 @@ async function loadShortcutSettings() {
         shortcutSettings.toggleNetwork = result.settings.shortcuts.toggleNetwork || DEFAULT_SHORTCUTS.toggleNetwork;
         
         // 更新UI上的快捷键显示
-        updateShortcutDisplay();
+        updateShortcutInputs(); // FIX: Renamed function
       }
       
       // 更新隐藏的应用列表
@@ -949,7 +972,6 @@ function initColorPickers() {
   const resetColor1 = document.getElementById('reset-color-1');
   const resetColor2 = document.getElementById('reset-color-2');
   const gradientPreview = document.getElementById('gradient-preview');
-  const saveGradientBtn = document.getElementById('save-gradient');
   
   if (colorPicker1 && colorPicker2) {
     // 更新颜色选择器的初始值
@@ -988,12 +1010,6 @@ function initColorPickers() {
       updateGradientPreview();
       applyBackgroundColors(); // 立即应用到背景
     });
-    
-    // 保存按钮事件
-    saveGradientBtn?.addEventListener('click', function() {
-      // 保存颜色设置并显示反馈
-      saveGradientSettings();
-    });
   }
 }
 
@@ -1027,8 +1043,24 @@ function applyBackgroundColors() {
   try {
     const currentTheme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
     console.log('应用背景颜色，当前主题:', currentTheme);
-    const color1 = themeSettings.backgroundColors[currentTheme].color1;
-    const color2 = themeSettings.backgroundColors[currentTheme].color2;
+    
+    let color1, color2;
+    
+    if (currentTheme === 'light') {
+      // Force light theme colors for better contrast
+      color1 = '#e0f2ff';
+      color2 = '#c1e8ff';
+      // Optionally update themeSettings object if you want the color pickers to reflect this forced value
+      // themeSettings.backgroundColors.light.color1 = color1;
+      // themeSettings.backgroundColors.light.color2 = color2;
+    } else {
+      // Use saved dark theme colors
+      color1 = themeSettings.backgroundColors.dark.color1;
+      color2 = themeSettings.backgroundColors.dark.color2;
+    }
+    
+    // 确保颜色被持久化到存储 - Consider if saving is still desired if light theme is forced
+    saveThemeSetting();
     
     // 更新CSS变量
     document.documentElement.style.setProperty('--gradient-color-1', color1);
@@ -1061,33 +1093,5 @@ function toggleSettings() {
       // 显示主要卡片
       document.getElementById('network-control').classList.remove('hidden');
     }
-  }
-}
-
-// 保存渐变设置
-async function saveGradientSettings() {
-  try {
-    // 显示保存中状态
-    const saveButton = document.getElementById('save-gradient');
-    if (saveButton) {
-      const originalText = saveButton.textContent;
-      saveButton.textContent = '保存中...';
-      saveButton.disabled = true;
-      
-      // 保存设置
-      await saveThemeSetting();
-      
-      // 显示成功状态
-      saveButton.textContent = '已保存';
-      
-      // 3秒后恢复原始状态
-      setTimeout(() => {
-        saveButton.textContent = originalText;
-        saveButton.disabled = false;
-      }, 3000);
-    }
-  } catch (error) {
-    console.error('保存渐变设置失败:', error);
-    alert('保存渐变设置失败，请查看控制台了解详情');
   }
 }

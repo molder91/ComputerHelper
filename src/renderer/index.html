@@ -7,27 +7,11 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <!-- 动态背景 -->
-  <div class="animated-gradient"></div>
-  
   <div class="background-shapes">
     <div class="shape shape-1"></div>
     <div class="shape shape-2"></div>
     <div class="shape shape-3"></div>
   </div>
-
-  <!-- 主题切换按钮 -->
-  <div class="theme-toggle" id="theme-toggle">
-    <!-- 太阳图标(亮色模式) -->
-    <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-      <path d="M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0 2a7 7 0 1 1 0-14 7 7 0 0 1 0 14zm0-15a1 1 0 0 1 1 1v1a1 1 0 0 1-2 0V5a1 1 0 0 1 1-1zm0 15a1 1 0 0 1 1 1v1a1 1 0 0 1-2 0v-1a1 1 0 0 1 1-1zM5 12a1 1 0 0 1-1-1 1 1 0 0 1 1-1h1a1 1 0 0 1 0 2H5zm15 0a1 1 0 0 1-1-1 1 1 0 0 1 1-1h1a1 1 0 0 1 0 2h-1zM6.36 7.05a1 1 0 0 1-1.41-1.41l.71-.71a1 1 0 0 1 1.41 1.41l-.71.71zm12.02 12.02a1 1 0 0 1-1.41-1.41l.71-.71a1 1 0 0 1 1.41 1.41l-.71.71zM6.36 16.95a1 1 0 0 1 1.41 1.41l-.71.71a1 1 0 0 1-1.41-1.41l.71-.71zM18.38 4.93a1 1 0 0 1 1.41 1.41l-.71.71a1 1 0 0 1-1.41-1.41l.71-.71z"/>
-    </svg>
-    <!-- 月亮图标(暗色模式) -->
-    <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-      <path d="M10 7a7 7 0 0 0 12 4.9v.1c0 5.523-4.477 10-10 10a9.97 9.97 0 0 1-5-1.344 10 10 0 0 0 5-8.656zm2 0a5 5 0 0 1-2 4 9 9 0 0 1-4-7.5 5 5 0 0 1 6 3.5z"/>
-    </svg>
-  </div>
-
   <div class="container">
     <header>
       <h1>Computer Helper</h1>
@@ -91,44 +75,6 @@
               <span>开机自动启动</span>
             </label>
           </div>
-          
-          <!-- 主题设置 -->
-          <div class="setting-item theme-setting">
-            <label>主题模式:</label>
-            <div class="theme-option-container">
-              <label class="theme-option">
-                <input type="radio" name="theme" value="light" id="theme-light">
-                <span>浅色</span>
-              </label>
-              <label class="theme-option">
-                <input type="radio" name="theme" value="dark" id="theme-dark">
-                <span>深色</span>
-              </label>
-              <label class="theme-option">
-                <input type="radio" name="theme" value="system" id="theme-system">
-                <span>跟随系统</span>
-              </label>
-            </div>
-          </div>
-          
-          <!-- 背景颜色自定义 -->
-          <div class="setting-item background-setting">
-            <label>背景颜色自定义:</label>
-            <div class="color-pickers">
-              <div class="color-picker-container">
-                <label>渐变起始色:</label>
-                <input type="color" id="gradient-color-1" class="color-picker">
-                <button id="reset-color-1" class="reset-color-btn">重置</button>
-              </div>
-              <div class="color-picker-container">
-                <label>渐变结束色:</label>
-                <input type="color" id="gradient-color-2" class="color-picker">
-                <button id="reset-color-2" class="reset-color-btn">重置</button>
-              </div>
-            </div>
-            <div class="gradient-preview" id="gradient-preview"></div>
-          </div>
-          
           <div class="setting-actions">
             <button id="save-settings" class="action-button primary">保存设置</button>
             <button id="cancel-settings" class="action-button">取消</button>
@@ -138,7 +84,7 @@
     </main>
 
     <footer>
-      <p>Computer Helper v0.0.2 - 网络控制 | 应用管理 | 系统工具 - 支持 macOS和Windows</p>
+      <p>Computer Helper v0.0.1 - 网络控制 | 应用管理 | 系统工具 - 支持 macOS, Windows 和 Linux</p>
     </footer>
   </div>
 

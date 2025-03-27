@@ -8,6 +8,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  // 初始化主题
+  initTheme();
+
   // 获取网络状态
   fetchNetworkStatus();
 
@@ -16,6 +19,28 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // 定时刷新网络状态
   setInterval(fetchNetworkStatus, 5000);
+  
+  // 添加主题切换按钮事件监听
+  document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
+  
+  // 添加设置按钮事件监听
+  document.getElementById('settings-toggle').addEventListener('click', toggleSettings);
+  
+  // 添加保存设置按钮事件监听
+  const saveSettingsBtn = document.getElementById('save-settings');
+  saveSettingsBtn?.addEventListener('click', saveShortcutSettings);
+  
+  // 添加页面刷新前的确认，防止设置丢失
+  window.addEventListener('beforeunload', (e) => {
+    // 检查设置面板是否打开
+    const settingsSection = document.getElementById('settings-section');
+    if (settingsSection && !settingsSection.classList.contains('hidden')) {
+      // 设置确认信息，在大多数现代浏览器中只会显示通用消息
+      e.preventDefault();
+      e.returnValue = '确定要刷新页面吗？所有未保存的设置将丢失。';
+      return e.returnValue;
+    }
+  });
 });
 
 // 存储快捷键设置
@@ -26,6 +51,40 @@ const shortcutSettings = {
   hideApp: 'CommandOrControl+Shift+H',  // 隐藏应用快捷键
   autoHideStartup: false,
   startWithSystem: false
+};
+
+// 默认快捷键设置
+const DEFAULT_SHORTCUTS = {
+  hideWindow: 'Escape',
+  toggleNetwork: '',
+  showWindow: 'Alt+Shift+S',
+  hideApp: 'CommandOrControl+Shift+H'
+};
+
+// 主题设置
+let themeSettings = {
+  theme: 'system', // 'light', 'dark', 'system'
+  backgroundColors: {
+    light: {
+      color1: '#667eea', // 默认亮色渐变起始色
+      color2: '#764ba2'  // 默认亮色渐变结束色
+    },
+    dark: {
+      color1: '#1f2937', // 默认暗色渐变起始色
+      color2: '#111827'  // 默认暗色渐变结束色
+    }
+  }
+};
+
+// 默认颜色常量
+const DEFAULT_LIGHT_COLORS = {
+  color1: '#667eea',
+  color2: '#764ba2'
+};
+
+const DEFAULT_DARK_COLORS = {
+  color1: '#1f2937',
+  color2: '#111827'
 };
 
 // 存储隐藏的应用列表
@@ -47,30 +106,71 @@ function hideWindow() {
 // 从主进程加载快捷键设置和隐藏的应用列表
 async function loadShortcutSettings() {
   try {
+    console.log('从主进程加载设置...');
     const result = await window.electronAPI.loadSettings();
+    console.log('加载设置结果:', result);
+    
     if (result.success && result.settings) {
       // 更新快捷键设置
       if (result.settings.shortcuts) {
-        shortcutSettings.hideWindow = result.settings.shortcuts.hideWindow || 'Escape';
-        shortcutSettings.toggleNetwork = result.settings.shortcuts.toggleNetwork || '';
-        shortcutSettings.showWindow = result.settings.shortcuts.showWindow || 'Alt+Shift+S';
-        shortcutSettings.hideApp = result.settings.shortcuts.hideApp || 'CommandOrControl+Shift+H';
+        shortcutSettings.hideWindow = result.settings.shortcuts.hideWindow || DEFAULT_SHORTCUTS.hideWindow;
+        shortcutSettings.toggleNetwork = result.settings.shortcuts.toggleNetwork || DEFAULT_SHORTCUTS.toggleNetwork;
+        shortcutSettings.showWindow = result.settings.shortcuts.showWindow || DEFAULT_SHORTCUTS.showWindow;
+        shortcutSettings.hideApp = result.settings.shortcuts.hideApp || DEFAULT_SHORTCUTS.hideApp;
       }
-      shortcutSettings.autoHideStartup = result.settings.autoHideStartup || false;
-      shortcutSettings.startWithSystem = result.settings.startWithSystem || false;
       
       // 更新隐藏的应用列表
       if (result.settings.hiddenApps) {
         hiddenApps = result.settings.hiddenApps;
+        
+        // 更新UI上的隐藏应用列表
         updateHiddenAppsList();
       }
+
+      // 更新主题设置并应用
+      if (result.settings.theme) {
+        themeSettings.theme = result.settings.theme || 'system';
+        console.log('从设置加载主题:', themeSettings.theme);
+      }
+      
+      // 更新背景颜色设置
+      if (result.settings.backgroundColors) {
+        console.log('从设置加载背景颜色:', result.settings.backgroundColors);
+        // 确保背景颜色设置结构完整
+        if (result.settings.backgroundColors.light && result.settings.backgroundColors.dark) {
+          themeSettings.backgroundColors = {
+            light: {
+              color1: result.settings.backgroundColors.light.color1 || DEFAULT_LIGHT_COLORS.color1,
+              color2: result.settings.backgroundColors.light.color2 || DEFAULT_LIGHT_COLORS.color2
+            },
+            dark: {
+              color1: result.settings.backgroundColors.dark.color1 || DEFAULT_DARK_COLORS.color1,
+              color2: result.settings.backgroundColors.dark.color2 || DEFAULT_DARK_COLORS.color2
+            }
+          };
+        }
+        // 确保在加载后应用背景颜色
+        applyBackgroundColors();
+      }
+      
+      // 应用主题
+      applyTheme(themeSettings.theme);
       
       // 更新UI
       updateShortcutInputs();
+      updateColorPickers();
+      
+      // 初始化主题单选按钮
+      initThemeRadios();
+      
+      return result.settings;
+    } else {
+      console.error('加载设置失败:', result.message || '未知错误');
     }
   } catch (e) {
-    console.error('加载设置失败:', e);
+    console.error('加载设置异常:', e);
   }
+  return null;
 }
 
 // 保存快捷键设置到主进程
@@ -82,6 +182,19 @@ async function saveShortcutSettings() {
   const hideAppInput = document.getElementById('hide-app-shortcut');
   const autoHideStartupCheckbox = document.getElementById('auto-hide-startup');
   const startWithSystemCheckbox = document.getElementById('start-with-system');
+  
+  // 获取选中的主题
+  const themeLightRadio = document.getElementById('theme-light');
+  const themeDarkRadio = document.getElementById('theme-dark');
+  const themeSystemRadio = document.getElementById('theme-system');
+  
+  if (themeLightRadio && themeLightRadio.checked) {
+    themeSettings.theme = 'light';
+  } else if (themeDarkRadio && themeDarkRadio.checked) {
+    themeSettings.theme = 'dark';
+  } else if (themeSystemRadio && themeSystemRadio.checked) {
+    themeSettings.theme = 'system';
+  }
   
   if (hideWindowInput && toggleNetworkInput && showWindowInput && hideAppInput && autoHideStartupCheckbox && startWithSystemCheckbox) {
     shortcutSettings.hideWindow = hideWindowInput.value || 'Escape';
@@ -101,7 +214,9 @@ async function saveShortcutSettings() {
           hideApp: shortcutSettings.hideApp
         },
         autoHideStartup: shortcutSettings.autoHideStartup,
-        startWithSystem: shortcutSettings.startWithSystem
+        startWithSystem: shortcutSettings.startWithSystem,
+        theme: themeSettings.theme,
+        backgroundColors: themeSettings.backgroundColors
       };
       
       // 保存设置到主进程
@@ -113,6 +228,10 @@ async function saveShortcutSettings() {
         if (settingsSection) {
           settingsSection.classList.add('hidden');
         }
+        
+        // 应用主题和背景颜色
+        applyTheme(themeSettings.theme);
+        applyBackgroundColors();
         
         // 显示保存成功提示
         alert('设置已保存');
@@ -126,6 +245,140 @@ async function saveShortcutSettings() {
   }
 }
 
+// 初始化主题
+async function initTheme() {
+  // 加载保存的主题设置
+  const settings = await loadShortcutSettings();
+  console.log('已加载设置:', settings);
+  
+  // 监听系统主题变化
+  if (window.matchMedia) {
+    const darkModeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    console.log('系统主题是否为深色:', darkModeMediaQuery.matches);
+    
+    // 应用主题设置
+    if (themeSettings.theme === 'system') {
+      setTheme(darkModeMediaQuery.matches ? 'dark' : 'light', false);
+    } else {
+      // 直接应用用户选择的主题
+      setTheme(themeSettings.theme, false);
+    }
+    
+    // 监听系统主题变化
+    darkModeMediaQuery.addEventListener('change', (e) => {
+      console.log('系统主题变化:', e.matches ? 'dark' : 'light');
+      if (themeSettings.theme === 'system') {
+        setTheme(e.matches ? 'dark' : 'light', false);
+      }
+    });
+  } else {
+    // 如果浏览器不支持matchMedia，默认使用亮色主题
+    setTheme('light', false);
+  }
+}
+
+// 切换主题
+function toggleTheme() {
+  const htmlElement = document.documentElement;
+  const currentTheme = htmlElement.getAttribute('data-theme');
+  
+  console.log('点击切换主题按钮，当前主题:', currentTheme);
+  
+  if (currentTheme === 'dark') {
+    themeSettings.theme = 'light';
+    setTheme('light', true);
+  } else {
+    themeSettings.theme = 'dark';
+    setTheme('dark', true);
+  }
+  
+  // 更新主题单选按钮状态
+  updateThemeRadios();
+  
+  // 保存主题设置
+  saveThemeSetting();
+}
+
+// 更新主题单选按钮状态
+function updateThemeRadios() {
+  const themeLightRadio = document.getElementById('theme-light');
+  const themeDarkRadio = document.getElementById('theme-dark');
+  const themeSystemRadio = document.getElementById('theme-system');
+  
+  if (themeLightRadio && themeDarkRadio && themeSystemRadio) {
+    themeLightRadio.checked = themeSettings.theme === 'light';
+    themeDarkRadio.checked = themeSettings.theme === 'dark';
+    themeSystemRadio.checked = themeSettings.theme === 'system';
+  }
+}
+
+// 应用主题
+function applyTheme(themeSetting) {
+  console.log('应用主题:', themeSetting);
+  if (themeSetting === 'system') {
+    // 检测系统主题
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      setTheme('dark', false);
+    } else {
+      setTheme('light', false);
+    }
+  } else {
+    setTheme(themeSetting, false);
+  }
+}
+
+// 设置主题
+function setTheme(theme, savePreference) {
+  console.log('设置主题:', theme);
+  const htmlElement = document.documentElement;
+  
+  if (theme === 'dark') {
+    htmlElement.setAttribute('data-theme', 'dark');
+  } else {
+    htmlElement.removeAttribute('data-theme');
+  }
+  
+  // 更新背景颜色
+  applyBackgroundColors();
+  
+  if (savePreference) {
+    themeSettings.theme = theme;
+    saveThemeSetting();
+  }
+}
+
+// 保存主题相关设置
+async function saveThemeSetting() {
+  try {
+    // 创建要保存的设置对象，包含现有设置和主题
+    const settings = {
+      shortcuts: {
+        hideWindow: shortcutSettings.hideWindow,
+        toggleNetwork: shortcutSettings.toggleNetwork,
+        showWindow: shortcutSettings.showWindow,
+        hideApp: shortcutSettings.hideApp
+      },
+      autoHideStartup: shortcutSettings.autoHideStartup,
+      startWithSystem: shortcutSettings.startWithSystem,
+      theme: themeSettings.theme,
+      backgroundColors: themeSettings.backgroundColors
+    };
+    
+    console.log('保存设置到 electron-store:', settings);
+    
+    // 保存设置到主进程
+    const result = await window.electronAPI.saveSettings(settings);
+    
+    if (result && result.success) {
+      console.log('设置保存成功');
+    } else {
+      console.error('设置保存失败:', result?.message || '未知错误');
+    }
+  } catch (error) {
+    console.error('保存主题设置失败:', error);
+  }
+}
+
 // 更新设置输入框的显示值
 function updateShortcutInputs() {
   const hideWindowInput = document.getElementById('hide-window-shortcut');
@@ -134,6 +387,11 @@ function updateShortcutInputs() {
   const hideAppInput = document.getElementById('hide-app-shortcut');
   const autoHideStartupCheckbox = document.getElementById('auto-hide-startup');
   const startWithSystemCheckbox = document.getElementById('start-with-system');
+  
+  // 更新主题单选按钮
+  const themeLightRadio = document.getElementById('theme-light');
+  const themeDarkRadio = document.getElementById('theme-dark');
+  const themeSystemRadio = document.getElementById('theme-system');
   
   if (hideWindowInput && toggleNetworkInput && showWindowInput && hideAppInput) {
     hideWindowInput.value = shortcutSettings.hideWindow || '';
@@ -148,6 +406,13 @@ function updateShortcutInputs() {
   
   if (startWithSystemCheckbox) {
     startWithSystemCheckbox.checked = shortcutSettings.startWithSystem || false;
+  }
+  
+  // 设置主题单选按钮状态
+  if (themeLightRadio && themeDarkRadio && themeSystemRadio) {
+    themeLightRadio.checked = themeSettings.theme === 'light';
+    themeDarkRadio.checked = themeSettings.theme === 'dark';
+    themeSystemRadio.checked = themeSettings.theme === 'system';
   }
 }
 
@@ -183,6 +448,61 @@ function initShortcutInputs() {
   if (hideAppInput) {
     hideAppInput.addEventListener('click', function() {
       startRecordingShortcut(this);
+    });
+  }
+  
+  // 初始化主题单选按钮事件
+  initThemeRadios();
+  
+  // 初始化颜色选择器
+  initColorPickers();
+}
+
+// 初始化主题单选按钮
+function initThemeRadios() {
+  const lightRadio = document.getElementById('theme-light');
+  const darkRadio = document.getElementById('theme-dark');
+  const systemRadio = document.getElementById('theme-system');
+  
+  // 根据当前设置选中对应单选按钮
+  if (lightRadio && darkRadio && systemRadio) {
+    // 重置所有单选按钮
+    lightRadio.checked = false;
+    darkRadio.checked = false;
+    systemRadio.checked = false;
+    
+    // 根据当前主题设置选中对应按钮
+    if (themeSettings.theme === 'light') {
+      lightRadio.checked = true;
+    } else if (themeSettings.theme === 'dark') {
+      darkRadio.checked = true;
+    } else {
+      systemRadio.checked = true;
+    }
+    
+    // 为单选按钮添加事件监听器
+    lightRadio.addEventListener('change', function() {
+      if (this.checked) {
+        themeSettings.theme = 'light';
+        applyTheme('light'); // 立即应用新主题
+        saveThemeSetting(); // 自动保存设置
+      }
+    });
+    
+    darkRadio.addEventListener('change', function() {
+      if (this.checked) {
+        themeSettings.theme = 'dark';
+        applyTheme('dark'); // 立即应用新主题
+        saveThemeSetting(); // 自动保存设置
+      }
+    });
+    
+    systemRadio.addEventListener('change', function() {
+      if (this.checked) {
+        themeSettings.theme = 'system';
+        applyTheme('system'); // 立即应用新主题
+        saveThemeSetting(); // 自动保存设置
+      }
     });
   }
 }
@@ -431,11 +751,6 @@ function hideHiddenAppsPanel() {
   hiddenAppsSection?.classList.add('hidden');
 }
 
-// 在页面加载时加载快捷键设置
-document.addEventListener('DOMContentLoaded', () => {
-  loadShortcutSettings();
-});
-
 // 添加键盘快捷键
 window.addEventListener('keydown', (event) => {
   // 如果正在记录快捷键，不触发快捷键功能
@@ -510,30 +825,10 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   minimizeBtn?.addEventListener('click', hideWindow);
   
-  // 设置按钮
-  const settingsBtn = document.getElementById('settings-btn');
-  const settingsSection = document.getElementById('settings-section');
-  if (settingsBtn) {
-    settingsBtn.addEventListener('click', () => {
-      // 删除该事件监听器，因为已经删除了该按钮
-    });
-  }
-  
-  // 添加保存设置按钮事件监听
-  const saveSettingsBtn = document.getElementById('save-settings');
-  if (saveSettingsBtn) {
-    saveSettingsBtn.addEventListener('click', saveShortcutSettings);
-  }
-  
   // 添加取消设置按钮事件监听
   const cancelSettingsBtn = document.getElementById('cancel-settings');
   if (cancelSettingsBtn) {
-    cancelSettingsBtn.addEventListener('click', () => {
-      const settingsSection = document.getElementById('settings-section');
-      if (settingsSection) {
-        settingsSection.classList.add('hidden');
-      }
-    });
+    cancelSettingsBtn.addEventListener('click', toggleSettings);
   }
   
   // 初始化快捷键输入框和清除按钮
@@ -693,3 +988,121 @@ function addRippleEffect() {
 async function runNetworkDiagnostics() {
   // 已删除
 }
+
+// 初始化颜色选择器
+function initColorPickers() {
+  const colorPicker1 = document.getElementById('gradient-color-1');
+  const colorPicker2 = document.getElementById('gradient-color-2');
+  const resetColor1 = document.getElementById('reset-color-1');
+  const resetColor2 = document.getElementById('reset-color-2');
+  const gradientPreview = document.getElementById('gradient-preview');
+  
+  if (colorPicker1 && colorPicker2) {
+    // 更新颜色选择器的初始值
+    updateColorPickers();
+    
+    // 添加颜色选择器的事件监听器
+    colorPicker1.addEventListener('input', function() {
+      const currentTheme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+      themeSettings.backgroundColors[currentTheme].color1 = this.value;
+      updateGradientPreview();
+      applyBackgroundColors(); // 立即应用到背景
+    });
+    
+    colorPicker2.addEventListener('input', function() {
+      const currentTheme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+      themeSettings.backgroundColors[currentTheme].color2 = this.value;
+      updateGradientPreview();
+      applyBackgroundColors(); // 立即应用到背景
+    });
+    
+    // 重置按钮事件
+    resetColor1?.addEventListener('click', function() {
+      const currentTheme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+      const defaultColor = currentTheme === 'dark' ? DEFAULT_DARK_COLORS.color1 : DEFAULT_LIGHT_COLORS.color1;
+      themeSettings.backgroundColors[currentTheme].color1 = defaultColor;
+      colorPicker1.value = defaultColor;
+      updateGradientPreview();
+      applyBackgroundColors(); // 立即应用到背景
+    });
+    
+    resetColor2?.addEventListener('click', function() {
+      const currentTheme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+      const defaultColor = currentTheme === 'dark' ? DEFAULT_DARK_COLORS.color2 : DEFAULT_LIGHT_COLORS.color2;
+      themeSettings.backgroundColors[currentTheme].color2 = defaultColor;
+      colorPicker2.value = defaultColor;
+      updateGradientPreview();
+      applyBackgroundColors(); // 立即应用到背景
+    });
+  }
+}
+
+// 更新颜色选择器的值
+function updateColorPickers() {
+  const colorPicker1 = document.getElementById('gradient-color-1');
+  const colorPicker2 = document.getElementById('gradient-color-2');
+  
+  if (colorPicker1 && colorPicker2) {
+    const currentTheme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+    colorPicker1.value = themeSettings.backgroundColors[currentTheme].color1;
+    colorPicker2.value = themeSettings.backgroundColors[currentTheme].color2;
+    updateGradientPreview();
+  }
+}
+
+// 更新渐变预览
+function updateGradientPreview() {
+  const gradientPreview = document.getElementById('gradient-preview');
+  const currentTheme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+  const color1 = themeSettings.backgroundColors[currentTheme].color1;
+  const color2 = themeSettings.backgroundColors[currentTheme].color2;
+  
+  if (gradientPreview) {
+    gradientPreview.style.background = `linear-gradient(135deg, ${color1} 0%, ${color2} 100%)`;
+  }
+}
+
+// 应用背景颜色
+function applyBackgroundColors() {
+  try {
+    const currentTheme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+    console.log('应用背景颜色，当前主题:', currentTheme);
+    const color1 = themeSettings.backgroundColors[currentTheme].color1;
+    const color2 = themeSettings.backgroundColors[currentTheme].color2;
+    
+    // 确保颜色被持久化到存储
+    saveThemeSetting();
+    
+    // 更新CSS变量
+    document.documentElement.style.setProperty('--gradient-color-1', color1);
+    document.documentElement.style.setProperty('--gradient-color-2', color2);
+    
+    // 更新颜色选择器
+    updateColorPickers();
+  } catch (error) {
+    console.error('应用背景颜色错误:', error);
+  }
+}
+
+// 切换设置面板显示状态
+function toggleSettings() {
+  const settingsSection = document.getElementById('settings-section');
+  if (settingsSection) {
+    const isHidden = settingsSection.classList.contains('hidden');
+    
+    // 隐藏其他面板
+    document.querySelectorAll('.card').forEach(card => {
+      if (card.id !== 'settings-section') {
+        card.classList.add('hidden');
+      }
+    });
+    
+    if (isHidden) {
+      settingsSection.classList.remove('hidden');
+    } else {
+      settingsSection.classList.add('hidden');
+      // 显示主要卡片
+      document.getElementById('network-control').classList.remove('hidden');
+    }
+  }
+} 
